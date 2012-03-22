@@ -2,12 +2,12 @@ from multiprocessing import Process
 
 
 class Node(Process):
-    def __init__(self):
+    def __init__(self, address=-1):
         # call base class init
         super(Node, self).__init__()
 
-        # set standart address
-        self.address = -1
+        # set address
+        self.address = address
 
     def run(self):
         # main loop

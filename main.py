@@ -1,20 +1,15 @@
 from multiprocessing import Pipe
 from multiprocessing.managers import BaseManager
 import socket
-import cluster
 import time
+import os
+import cluster
 
 
 def main():
-    # create node
-    node = cluster.Node()
-
     # create RoutingNode
     routingNode = cluster.RoutingNode(0)
     routingNode.start()
-
-    # create pip
-    parent, child = Pipe()
 
     # create queue manager
     time.sleep(1)
@@ -28,16 +23,15 @@ def main():
     queueManager.connect()
     queue = queueManager.get_queue()
 
-    # start node
-    node.start(child, None)
+    # create new node
+    queue.put((os.getpid(), 0, 'newnode'))
 
     # main loop
     while 1:
-        print 'Hello'
-
         # send data to node
-        parent.send((0, -1, 'Hallo du da'))
-        queue.put((0, 0, 'Jo router'))
+        queue.put((os.getpid(), 0, 'Jo router'))
+        queue.put((os.getpid(), 1, 'Hallo node'))
+        queue.put((1, 0, 'getnodes'))
 
         # wait
         time.sleep(2)

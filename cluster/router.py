@@ -13,6 +13,9 @@ class RoutingNode(Process):
         # set address
         self.address = address
 
+        # list with node connections
+        self.nodes = {}
+
         # create message queue
         self.queue = Queue()
 
@@ -33,9 +36,44 @@ class RoutingNode(Process):
                 self.on_message(sender, message)
 
             else:
-                print 'should be distributed'
+                self.nodes[reciever].send((sender, reciever, message))
 
     def on_message(self, sender, message):
+        # split message
+        messages = message.split()
+
+        # create answer
+        answer = ''
+
+        # check messages
+        if messages[0] == 'newnode':
+            # new node address
+            address = self.address + len(self.nodes) + 1
+
+            # create new Node
+            node = Node(address)
+
+            # create node connection
+            parent, child = Pipe()
+
+            # save connection
+            self.nodes[address] = parent
+
+            # start node
+            node.start(child, self.queue)
+
+            # answer new node address
+            answer = str(address)
+
+        elif messages[0] == 'getnodes':
+            # create answer
+            for key in self.nodes:
+                answer = answer + '{} '.format(key)
+
+        # answer
+        if sender in self.nodes and answer != '':
+            self.nodes[sender].send((self.address, sender, answer))
+
         print '{}: from {}'.format(message, sender)
 
 
