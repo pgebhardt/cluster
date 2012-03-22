@@ -8,11 +8,14 @@ import cluster
 
 def main():
     # create RoutingNode
-    routingNode = cluster.RoutingNode(0)
-    routingNode.start()
+    routingNode1 = cluster.RoutingNode(0)
+    routingNode2 = cluster.RoutingNode(100)
+
+    routingNode1.start()
+    routingNode2.start()
+    time.sleep(1)
 
     # create queue manager
-    time.sleep(1)
 
     class QueueManager(BaseManager): pass
     QueueManager.register('get_queue')
@@ -25,6 +28,7 @@ def main():
 
     # create new node
     queue.put((os.getpid(), 0, 'newnode'))
+    queue.put((os.getpid(), 0, 'connect 192.168.55.161 3100'))
 
     # main loop
     while 1:
