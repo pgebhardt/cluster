@@ -27,7 +27,7 @@ class Node(Process):
     def on_message(self, sender, message):
         # standart print
         print '{} recieved data from {}: {}'.format(
-            self.pid, sender, message)
+            self.address, sender, message)
 
     def start(self, input, output):
         # save input and output

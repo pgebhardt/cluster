@@ -28,7 +28,15 @@ class RoutingNode(Process):
             # get incoming messages
             sender, reciever, message = self.queue.get()
 
-            print (sender, reciever, message)
+            # check reciever
+            if reciever == self.address:
+                self.on_message(sender, message)
+
+            else:
+                print 'should be distributed'
+
+    def on_message(self, sender, message):
+        print '{}: from {}'.format(message, sender)
 
 
 class QueueThread(Thread):
