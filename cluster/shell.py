@@ -31,11 +31,24 @@ class Shell(object):
         # main loop
         while True:
             # get commands
-            userInput = input('> ')
-            recever, message = userInput
+            userInput = raw_input('> ')
+
+            # check for exir
+            if userInput == 'quit' or userInput == 'exit':
+                break
+
+            # parse input
+            try:
+                recever, message = eval(userInput)
+
+            except:
+                continue
 
             # send input message to routing node
             self.router.queue.put((self.address + 1, recever, message))
 
             # wait a bit
             time.sleep(0.2)
+
+        # stop router
+        

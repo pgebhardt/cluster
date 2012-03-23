@@ -80,7 +80,6 @@ class RoutingNode(Process):
             node.start(child, self.queue)
 
             # answer list of local nodes
-            print self.routingnodes
             for router in self.routingnodes:
                 # check address
                 if router != self.address:
@@ -93,7 +92,6 @@ class RoutingNode(Process):
 
         elif message[0] == 'local node list':
             # add remote nodes to dict
-            print message[1]
             for node in message[1]:
                 self.remotenodes[node] = self.routingnodes[sender]
 

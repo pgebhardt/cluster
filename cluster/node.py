@@ -15,6 +15,10 @@ class Node(Process):
             # wait for input data
             sender, reciever, message = self.input.recv()
 
+            # check for termination
+            if message == 'stop':
+                return
+
             # check correct reciever
             if reciever != self.address:
                 self.output.put((self.address, sender,
