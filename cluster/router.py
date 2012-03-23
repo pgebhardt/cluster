@@ -13,11 +13,12 @@ class RoutingNode(Process):
         # set address
         self.address = address
 
-        # list with node connections
-        self.nodes = {}
-
         # create message queue
         self.queue = Queue()
+
+        # list with node connections
+        self.localnodes = {}
+        self.remotenodes = {self.address: self.queue}
 
         # create queue manager
         self.queueManager = QueueThread(self.queue, 3000 + address)
@@ -33,19 +34,30 @@ class RoutingNode(Process):
 
             # check reciever
             if reciever == self.address:
-                self.on_message(sender, message)
+                answer = self.on_message(sender, message)
 
-            else:
-                self.nodes[reciever].send((sender, reciever, message))
+                # create answer
+                if not answer is None:
+                    sender, reciever, message = reciever, sender, answer
+
+                else:
+                    continue
+
+            # send message
+            if reciever in self.localnodes:
+                self.localnodes[reciever].send((sender, reciever, message))
+
+            elif reciever in self.remotenodes:
+                self.remotenodes[reciever].put((sender, reciever, message))
 
     def on_message(self, sender, message):
         # create answer
-        answer = ''
+        answer = None
 
         # check messages
-        if message[0] == 'newnode':
+        if message[0] == 'new node':
             # new node address
-            address = self.address + len(self.nodes) + 1
+            address = self.address + len(self.localnodes) + 1
 
             # create new Node
             node = Node(address)
@@ -54,7 +66,7 @@ class RoutingNode(Process):
             parent, child = Pipe()
 
             # save connection
-            self.nodes[address] = parent
+            self.localnodes[address] = parent
 
             # start node
             node.start(child, self.queue)
@@ -62,9 +74,9 @@ class RoutingNode(Process):
             # answer new node address
             answer = str(address)
 
-        elif message[0] == 'addnode':
+        elif message[0] == 'add node':
             # new node address
-            address = self.address + len(self.nodes) + 1
+            address = self.address + len(self.localnodes) + 1
 
             # get node
             node = message[1]
@@ -73,7 +85,7 @@ class RoutingNode(Process):
             parent, child = Pipe()
 
             # save connection
-            self.nodes[address] = parent
+            self.localnodes[address] = parent
 
             # start node
             node.start(child, self.queue)
@@ -81,10 +93,14 @@ class RoutingNode(Process):
             # answer new node address
             answer = str(address)
 
-        elif message[0] == 'getnodes':
-            # create answer
-            for key in self.nodes:
-                answer = answer + '{} '.format(key)
+        elif message[0] == 'local nodes':
+            # list of local nodes
+            answer = ('local node list', self.localnodes.keys())
+
+        elif message[0] == 'local node list':
+            # add remote nodes to dict
+            for node in message[1]:
+                self.remotenodes[node] = self.remotenodes[sender]
 
         elif message[0] == 'connect':
             # create queue manager
@@ -97,9 +113,18 @@ class RoutingNode(Process):
             queueManager.connect()
             queue = queueManager.get_queue()
 
-        # answer
-        if sender in self.nodes and answer != '':
-            self.nodes[sender].send((self.address, sender, answer))
+            # add new remote node
+            self.remotenodes[sender] = queue
+            print self.remotenodes
+
+            # get remote nodes
+            answer = ('connected', )
+
+        elif message[0] == 'connected':
+            # ask for list of local nodes
+            answer = ('local nodes', )
+
+        return answer
 
 
 class QueueThread(Thread):
@@ -121,5 +146,4 @@ class QueueThread(Thread):
         server = self.manager.get_server()
 
         # start server
-        print 'start server'
         server.serve_forever()
