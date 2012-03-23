@@ -9,6 +9,9 @@ class Node(Process):
         # set address
         self.address = address
 
+        # set code
+        self.code = "print '{} recieved data from {}: {}'.format(address, sender, message)"
+
     def run(self):
         # main loop
         while True:
@@ -30,9 +33,15 @@ class Node(Process):
                 self.on_message(sender, message)
 
     def on_message(self, sender, message):
-        # standart print
-        print '{} recieved data from {}: {}'.format(
-            self.address, sender, message)
+        # check for commands 
+        if message[0] == 'set code':
+            # set code
+            self.code = message[1]
+
+        else:
+            # run code
+            exec(self.code, {'address': self.address,
+                'sender': sender, 'message': message})
 
     def start(self, input, output):
         # save input and output

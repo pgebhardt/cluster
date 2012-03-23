@@ -8,7 +8,7 @@ import cluster
 
 def main():
     # create RoutingNode
-    routingNode1 = cluster.RoutingNode(10)
+    routingNode1 = cluster.RoutingNode(100)
 
     routingNode1.start()
 
@@ -17,7 +17,7 @@ def main():
     print routingNode1.ipAddress
 
     # add shell
-    shell = cluster.Shell(20)
+    shell = cluster.Shell(0)
 
     # start shell
     shell.start()
