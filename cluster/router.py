@@ -39,14 +39,11 @@ class RoutingNode(Process):
                 self.nodes[reciever].send((sender, reciever, message))
 
     def on_message(self, sender, message):
-        # split message
-        messages = message.split()
-
         # create answer
         answer = ''
 
         # check messages
-        if messages[0] == 'newnode':
+        if message[0] == 'newnode':
             # new node address
             address = self.address + len(self.nodes) + 1
 
@@ -65,23 +62,40 @@ class RoutingNode(Process):
             # answer new node address
             answer = str(address)
 
-        elif messages[0] == 'getnodes':
+        elif message[0] == 'addnode':
+            # new node address
+            address = self.address + len(self.nodes) + 1
+
+            # get node
+            node = message[1]
+
+            # create node connection
+            parent, child = Pipe()
+
+            # save connection
+            self.nodes[address] = parent
+
+            # start node
+            node.start(child, self.queue)
+
+            # answer new node address
+            answer = str(address)
+
+        elif message[0] == 'getnodes':
             # create answer
             for key in self.nodes:
                 answer = answer + '{} '.format(key)
 
-        elif messages[0] == 'connect':
+        elif message[0] == 'connect':
             # create queue manager
             class QueueManager(BaseManager): pass
             QueueManager.register('get_queue')
             queueManager = QueueManager(address=(
-                messages[1], int(messages[2])))
+                message[1], message[2]))
 
             # connect
             queueManager.connect()
-            queue = queueManager.qet_queue()
-            print 'connected'
-
+            queue = queueManager.get_queue()
 
         # answer
         if sender in self.nodes and answer != '':

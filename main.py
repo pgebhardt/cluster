@@ -27,15 +27,15 @@ def main():
     queue = queueManager.get_queue()
 
     # create new node
-    queue.put((os.getpid(), 0, 'newnode'))
-    queue.put((os.getpid(), 0, 'connect 192.168.55.161 3100'))
+    queue.put((os.getpid(), 0, ('newnode', )))
+    queue.put((os.getpid(), 0, ('connect', '192.168.55.161', 3100)))
 
     # main loop
     while 1:
         # send data to node
-        queue.put((os.getpid(), 0, 'Jo router'))
-        queue.put((os.getpid(), 1, 'Hallo node'))
-        queue.put((1, 0, 'getnodes'))
+        queue.put((os.getpid(), 0, ('Jo router', )))
+        queue.put((os.getpid(), 1, ('Hallo node', )))
+        queue.put((1, 0, ('getnodes', )))
 
         # wait
         time.sleep(2)
