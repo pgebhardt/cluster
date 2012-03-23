@@ -25,6 +25,7 @@ def main():
         routingNode1.queue.put((os.getpid(), 1, ('Hallo node 1', )))
         routingNode1.queue.put((os.getpid(), 101, ('Hallo node 101', )))
         routingNode1.queue.put((1, 0, ('local nodes', )))
+        routingNode1.queue.put((1, 100, ('local nodes', )))
 
         # wait
         time.sleep(2)

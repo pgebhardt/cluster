@@ -78,25 +78,6 @@ class RoutingNode(Process):
             # answer new node address
             answer = str(address)
 
-        elif message[0] == 'add node':
-            # new node address
-            address = self.address + len(self.localnodes) + 1
-
-            # get node
-            node = message[1]
-
-            # create node connection
-            parent, child = Pipe()
-
-            # save connection
-            self.localnodes[address] = parent
-
-            # start node
-            node.start(child, self.queue)
-
-            # answer new node address
-            answer = str(address)
-
         elif message[0] == 'local nodes':
             # list of local nodes
             answer = ('local node list', self.localnodes.keys())
@@ -113,7 +94,7 @@ class RoutingNode(Process):
                 class QueueManager(BaseManager): pass
                 QueueManager.register('get_queue')
                 queueManager = QueueManager(address=(
-                    message[1], message[2]))
+                    message[1], message[2]), authkey='bla')
 
                 # connect
                 queueManager.connect()
@@ -143,7 +124,7 @@ class QueueThread(Thread):
         class QueueManager(BaseManager): pass
 
         QueueManager.register('get_queue', callable=lambda: self.queue)
-        self.manager = QueueManager(address=('', port))
+        self.manager = QueueManager(address=('', port), authkey='bla')
 
     def run(self):
         # get server
