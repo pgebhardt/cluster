@@ -80,10 +80,11 @@ class RoutingNode(Process):
             node.start(child, self.queue)
 
             # answer list of local nodes
+            print self.routingnodes
             for router in self.routingnodes:
                 # check address
                 if router != self.address:
-                    queue.put((self.address, router,
+                    self.queue.put((self.address, router,
                         ('local node list', self.localnodes.keys())))
 
         elif message[0] == 'local nodes':
@@ -91,14 +92,14 @@ class RoutingNode(Process):
             answer = ('local node list', self.localnodes.keys())
 
         elif message[0] == 'local node list':
-            print sender
             # add remote nodes to dict
+            print message[1]
             for node in message[1]:
                 self.remotenodes[node] = self.routingnodes[sender]
 
         elif message[0] == 'connect':
             # connect to routing node
-            if not message[1] in self.remotenodes:
+            if not message[1] in self.routingnodes:
                 # create queue manager
                 class QueueManager(BaseManager): pass
                 QueueManager.register('get_queue')
