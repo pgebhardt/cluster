@@ -41,6 +41,11 @@ class RoutingNode(Process):
             if reciever == self.address:
                 answer = self.on_message(sender, message)
 
+                # check answer for termination
+                if answer == 'stop':
+                    print 'terminating router {}'.format(self.address)
+                    return
+
                 # create answer
                 if not answer is None:
                     sender, reciever, message = reciever, sender, answer
@@ -116,6 +121,14 @@ class RoutingNode(Process):
                     ('connect', self.address, self.ipAddress, self.port)))
                 queue.put((self.address, message[1],
                     ('local nodes', )))
+
+        elif message[0] == 'stop':
+            # stop all local nodes
+            for node in self.localnodes:
+                self.localnodes[node].send((self.address, node, ('stop', )))
+
+            # send stop answer
+            answer = 'stop'
 
         return answer
 

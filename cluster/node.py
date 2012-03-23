@@ -16,7 +16,8 @@ class Node(Process):
             sender, reciever, message = self.input.recv()
 
             # check for termination
-            if message == 'stop':
+            if message[0] == 'stop':
+                print 'terminating node {}'.format(self.address)
                 return
 
             # check correct reciever

@@ -51,4 +51,4 @@ class Shell(object):
             time.sleep(0.2)
 
         # stop router
-        
+        self.router.queue.put((self.address, self.router.address, ('stop', )))
