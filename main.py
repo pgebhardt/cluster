@@ -22,7 +22,6 @@ def main():
     # main loop
     while 1:
         # send data to node
-        routingNode1.queue.put((os.getpid(), 0, ('Jo router', )))
         routingNode1.queue.put((os.getpid(), 1, ('Hallo node 1', )))
         routingNode1.queue.put((os.getpid(), 101, ('Hallo node 101', )))
         routingNode1.queue.put((1, 0, ('local nodes', )))

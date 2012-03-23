@@ -20,8 +20,12 @@ class RoutingNode(Process):
         self.localnodes = {}
         self.remotenodes = {self.address: self.queue}
 
+        # save ip address
+        self.ipAddress = socket.gethostbyname(socket.gethostname())
+        self.port = 3000 + address
+
         # create queue manager
-        self.queueManager = QueueThread(self.queue, 3000 + address)
+        self.queueManager = QueueThread(self.queue, self.port)
 
     def run(self):
         # start queue manager
@@ -103,26 +107,26 @@ class RoutingNode(Process):
                 self.remotenodes[node] = self.remotenodes[sender]
 
         elif message[0] == 'connect':
-            # create queue manager
-            class QueueManager(BaseManager): pass
-            QueueManager.register('get_queue')
-            queueManager = QueueManager(address=(
-                message[1], message[2]))
+            # connect to routing node
+            if not sender in self.remotenodes:
+                # create queue manager
+                class QueueManager(BaseManager): pass
+                QueueManager.register('get_queue')
+                queueManager = QueueManager(address=(
+                    message[1], message[2]))
 
-            # connect
-            queueManager.connect()
-            queue = queueManager.get_queue()
+                # connect
+                queueManager.connect()
+                queue = queueManager.get_queue()
 
-            # add new remote node
-            self.remotenodes[sender] = queue
-            print self.remotenodes
+                # add new remote node
+                self.remotenodes[sender] = queue
 
-            # get remote nodes
-            answer = ('connected', )
-
-        elif message[0] == 'connected':
-            # ask for list of local nodes
-            answer = ('local nodes', )
+                # answer
+                queue.put((self.address, sender,
+                    ('connect', self.ipAddress, self.port)))
+                queue.put((self.address, sender,
+                    ('local nodes', )))
 
         return answer
 
