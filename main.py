@@ -9,11 +9,7 @@ import cluster
 def main():
     # create RoutingNode
     routingNode1 = cluster.RoutingNode(100)
-
     routingNode1.start()
-
-    # create new node
-    time.sleep(2)
     print routingNode1.ipAddress
 
     # add shell

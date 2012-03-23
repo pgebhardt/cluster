@@ -41,11 +41,6 @@ class RoutingNode(Process):
             if reciever == self.address:
                 answer = self.on_message(sender, message)
 
-                # check answer for termination
-                if answer == 'stop':
-                    print 'terminating router {}'.format(self.address)
-                    return
-
                 # create answer
                 if not answer is None:
                     sender, reciever, message = reciever, sender, answer
@@ -62,6 +57,12 @@ class RoutingNode(Process):
 
             elif reciever in self.routingnodes:
                 self.routingnodes[reciever].put((sender, reciever, message))
+
+            # check message for termination
+            if message[0] == 'stop':
+                print 'terminating router {}'.format(self.address)
+                return
+
 
     def on_message(self, sender, message):
         # create answer
@@ -100,6 +101,14 @@ class RoutingNode(Process):
             for node in message[1]:
                 self.remotenodes[node] = self.routingnodes[sender]
 
+        elif message[0] == 'remote nodes':
+            # list of remote nodes
+            answer = ('remote node list', self.remotenodes.keys())
+
+        elif message[0] == 'routing nodes':
+            # list of routing nodes
+            answer = ('routing node list', self.routingnodes.keys())
+
         elif message[0] == 'connect':
             # connect to routing node
             if not message[1] in self.routingnodes:
@@ -122,13 +131,31 @@ class RoutingNode(Process):
                 queue.put((self.address, message[1],
                     ('local nodes', )))
 
+        elif message[0] == 'disconnect':
+            print sender, message
+            # check for own address
+            if sender == self.address:
+                return None
+
+            # delete all connected remote nodes
+            for node in message[1]:
+                # check for correct router
+                if self.remotenodes[node] == self.routingnodes[sender]:
+                    # delete node
+                    del self.remotenodes[node]
+
+            # remove routingnodes
+            del self.routingnodes[sender]
+
         elif message[0] == 'stop':
+            # inform all connected routing nodes
+            for router in self.routingnodes:
+                self.queue.put((self.address, router,
+                    ('disconnect', self.localnodes.keys())))
+
             # stop all local nodes
             for node in self.localnodes:
                 self.localnodes[node].send((self.address, node, ('stop', )))
-
-            # send stop answer
-            answer = 'stop'
 
         return answer
 
