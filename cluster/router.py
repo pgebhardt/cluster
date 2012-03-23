@@ -18,7 +18,8 @@ class RoutingNode(Process):
 
         # list with node connections
         self.localnodes = {}
-        self.remotenodes = {self.address: self.queue}
+        self.remotenodes = {}
+        self.routingnodes = {self.address: self.queue}
 
         # save ip address
         self.ipAddress = socket.gethostbyname(socket.gethostname())
@@ -54,6 +55,9 @@ class RoutingNode(Process):
             elif reciever in self.remotenodes:
                 self.remotenodes[reciever].put((sender, reciever, message))
 
+            elif reciever in self.routingnodes:
+                self.routingnodes[reciever].put((sender, reciever, message))
+
     def on_message(self, sender, message):
         # create answer
         answer = None
@@ -75,38 +79,43 @@ class RoutingNode(Process):
             # start node
             node.start(child, self.queue)
 
-            # answer new node address
-            answer = str(address)
+            # answer list of local nodes
+            for router in self.routingnodes:
+                # check address
+                if router != self.address:
+                    queue.put((self.address, router,
+                        ('local node list', self.localnodes.keys())))
 
         elif message[0] == 'local nodes':
             # list of local nodes
             answer = ('local node list', self.localnodes.keys())
 
         elif message[0] == 'local node list':
+            print sender
             # add remote nodes to dict
             for node in message[1]:
-                self.remotenodes[node] = self.remotenodes[sender]
+                self.remotenodes[node] = self.routingnodes[sender]
 
         elif message[0] == 'connect':
             # connect to routing node
-            if not sender in self.remotenodes:
+            if not message[1] in self.remotenodes:
                 # create queue manager
                 class QueueManager(BaseManager): pass
                 QueueManager.register('get_queue')
                 queueManager = QueueManager(address=(
-                    message[1], message[2]), authkey='bla')
+                    message[2], message[3]), authkey='bla')
 
                 # connect
                 queueManager.connect()
                 queue = queueManager.get_queue()
 
                 # add new remote node
-                self.remotenodes[sender] = queue
+                self.routingnodes[message[1]] = queue
 
                 # answer
-                queue.put((self.address, sender,
-                    ('connect', self.ipAddress, self.port)))
-                queue.put((self.address, sender,
+                queue.put((self.address, message[1],
+                    ('connect', self.address, self.ipAddress, self.port)))
+                queue.put((self.address, message[1],
                     ('local nodes', )))
 
         return answer

@@ -17,15 +17,22 @@ def main():
     # create new node
     routingNode1.queue.put((os.getpid(), 0, ('new node', )))
     routingNode2.queue.put((os.getpid(), 100, ('new node', )))
-    routingNode1.queue.put((100, 0, ('connect', '192.168.55.161', 3100)))
+    routingNode1.queue.put((os.getpid(), 0,
+        ('connect', 100, socket.gethostbyname(socket.gethostname()),
+        3100)))
+    print routingNode1.ipAddress
+
+    # add shell
+    shell = cluster.Shell(200)
+
+    # start shell
+    shell.start()
 
     # main loop
     while 1:
         # send data to node
         routingNode1.queue.put((os.getpid(), 1, ('Hallo node 1', )))
         routingNode1.queue.put((os.getpid(), 101, ('Hallo node 101', )))
-        routingNode1.queue.put((1, 0, ('local nodes', )))
-        routingNode1.queue.put((1, 100, ('local nodes', )))
 
         # wait
         time.sleep(2)
