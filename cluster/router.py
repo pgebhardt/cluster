@@ -134,6 +134,13 @@ class RoutingNode(Process):
                 queue.put((self.address, message[1],
                     ('local nodes', )))
 
+                # inform about success
+                answer = ('connected to {}'.format(message[1]), )
+
+            else:
+                # inform
+                answer = ('allready connected to {}'.format(message[1]), )
+
         elif message[0] == 'disconnect':
             # check for own address
             if sender == self.address:
@@ -162,6 +169,14 @@ class RoutingNode(Process):
 
             # create answer
             answer = ('router stopped', )
+
+        elif message[0] == 'unsupported command':
+            # output error
+            print "Error: '{}' not supported by {}".format(
+                message[1], sender)
+        else:
+            # answer
+            answer = ('unsupported command', message)
 
         return answer
 
