@@ -38,6 +38,11 @@ class Node(Process):
             # set code
             self.code = message[1]
 
+        elif message[0] == 'get code':
+            # answer code
+            self.output.put((self.address, sender,
+                (self.code, )))
+
         else:
             # run code
             exec(self.code, {'address': self.address,
