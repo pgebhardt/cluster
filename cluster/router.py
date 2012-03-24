@@ -156,6 +156,9 @@ class RoutingNode(Process):
             # remove routingnodes
             del self.routingnodes[sender]
 
+            # create answer
+            answer = ('disconnected from {}'.format(message[1]), )
+
         elif message[0] == 'stop':
             # inform all connected routing nodes
             for router in self.routingnodes:

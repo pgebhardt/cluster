@@ -13,21 +13,21 @@ class Shell(object):
         # create router
         self.router = RoutingNode(address)
 
-        # create connection
-        parent, self.input = Pipe()
-
-        # add connection
-        self.router.localnodes[self.router.address + 1] = parent
-        self.address = self.router.address + 1
-
         # add prining node
-        self.router.queue.put((self.address, self.router.address,
+        self.router.queue.put((address + 1, self.router.address,
             ('new node', )))
+
+        # update code
+        self.router.queue.put((self.router.address, address + 1,
+            ('set code', "print '{} answers: {}'.format(sender, message)")))
 
         # start router
         self.router.start()
 
     def start(self):
+        # wait a bit
+        time.sleep(0.2)
+
         # main loop
         while True:
             # get commands
@@ -45,10 +45,12 @@ class Shell(object):
                 continue
 
             # send input message to routing node
-            self.router.queue.put((self.address + 1, recever, message))
+            self.router.queue.put((self.router.address + 1,
+                recever, message))
 
             # wait a bit
             time.sleep(0.2)
 
         # stop router
-        self.router.queue.put((self.address, self.router.address, ('stop', )))
+        self.router.queue.put((self.router.address + 1,
+            self.router.address, ('stop', )))
