@@ -14,7 +14,7 @@ class Shell(object):
         self.router = RoutingNode(address)
 
         # add prining node
-        self.router.queue.put((address + 1, self.router.address,
+        self.router.queue.put((-1, self.router.address,
             ('new node', )))
 
         # update code
