@@ -92,6 +92,9 @@ class RoutingNode(Process):
                     self.queue.put((self.address, router,
                         ('local node list', self.localnodes.keys())))
 
+            # create answer
+            answer = ('node {} created'.format(address), )
+
         elif message[0] == 'local nodes':
             # list of local nodes
             answer = ('local node list', self.localnodes.keys())
