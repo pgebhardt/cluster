@@ -59,7 +59,7 @@ class RoutingNode(Process):
                 self.routingnodes[reciever].put((sender, reciever, message))
 
             # check message for termination
-            if message[0] == 'stop':
+            if message[0] == 'router stopped' and sender == self.address:
                 print 'terminating router {}'.format(self.address)
                 return
 
@@ -85,7 +85,7 @@ class RoutingNode(Process):
             # start node
             node.start(child, self.queue)
 
-            # answer list of local nodes
+            # broadcast list of local nodes
             for router in self.routingnodes:
                 # check address
                 if router != self.address:
@@ -132,7 +132,6 @@ class RoutingNode(Process):
                     ('local nodes', )))
 
         elif message[0] == 'disconnect':
-            print sender, message
             # check for own address
             if sender == self.address:
                 return None
@@ -150,12 +149,16 @@ class RoutingNode(Process):
         elif message[0] == 'stop':
             # inform all connected routing nodes
             for router in self.routingnodes:
-                self.queue.put((self.address, router,
-                    ('disconnect', self.localnodes.keys())))
+                if router != self.address:
+                    self.routingnodes[router].put((self.address, router,
+                        ('disconnect', self.localnodes.keys())))
 
             # stop all local nodes
             for node in self.localnodes:
                 self.localnodes[node].send((self.address, node, ('stop', )))
+
+            # create answer
+            answer = ('router stopped', )
 
         return answer
 
