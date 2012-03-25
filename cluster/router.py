@@ -118,15 +118,21 @@ class RoutingNode(Process):
         elif message[0] == 'connect':
             # connect to routing node
             if not message[1] in self.routingnodes:
-                # create queue manager
-                class QueueManager(BaseManager): pass
-                QueueManager.register('get_queue')
-                queueManager = QueueManager(address=(
-                    message[2], message[3]), authkey='bla')
+                try:
+                    # create queue manager
+                    class QueueManager(BaseManager): pass
+                    QueueManager.register('get_queue')
+                    queueManager = QueueManager(address=(
+                        message[2], message[3]), authkey='bla')
 
-                # connect
-                queueManager.connect()
-                queue = queueManager.get_queue()
+                    # connect
+                    queueManager.connect()
+                    queue = queueManager.get_queue()
+                except:
+                    # inform about failure
+                    answer = ('unable to connect to: {}'.format(
+                        message[1:]), )
+                    return answer
 
                 # add new remote node
                 self.routingnodes[message[1]] = queue
