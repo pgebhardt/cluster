@@ -5,6 +5,11 @@ import readline
 import time
 
 
+class ShellNode(Node):
+    def on_message(self, sender, message):
+        # report answers
+        print '{} answers: {}'.format(sender, message)
+
 class Shell(object):
     def __init__(self, address):
         # call base class init
@@ -15,11 +20,7 @@ class Shell(object):
 
         # add prining node
         self.router.queue.put((-1, self.router.address,
-            ('new node', )))
-
-        # update code
-        self.router.queue.put((self.router.address, address + 1,
-            ('set code', "print '{} answers: {}'.format(sender, message)")))
+            ('new node', ShellNode)))
 
         # start router
         self.router.start()

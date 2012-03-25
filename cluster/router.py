@@ -74,7 +74,10 @@ class RoutingNode(Process):
             address = self.address + len(self.localnodes) + 1
 
             # create new Node
-            node = Node(address)
+            if len(message) == 2:
+                node = message[1](address)
+            else:
+                node = Node(address)
 
             # create node connection
             parent, child = Pipe()
@@ -129,7 +132,7 @@ class RoutingNode(Process):
                 self.routingnodes[message[1]] = queue
 
                 # answer
-                queue.put((self.address, message[1],
+                queue.put((sender, message[1],
                     ('connect', self.address, self.ipAddress, self.port)))
                 queue.put((self.address, message[1],
                     ('local nodes', )))
