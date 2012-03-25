@@ -149,15 +149,19 @@ class RoutingNode(Process):
             if sender == self.address:
                 return None
 
+            # gather all relevant nodes
+            toDelete = []
+            for node in self.remotenodes:
+                if self.remotenodes[node] == self.routingnodes[message[1]]:
+                    toDelete.append(node)
+
             # delete all connected remote nodes
-            for node in message[1]:
-                # check for correct router
-                if self.remotenodes[node] == self.routingnodes[sender]:
-                    # delete node
-                    del self.remotenodes[node]
+            for node in toDelete:
+                # delete node
+                del self.remotenodes[node]
 
             # remove routingnodes
-            del self.routingnodes[sender]
+            del self.routingnodes[message[1]]
 
             # create answer
             answer = ('disconnected from {}'.format(message[1]), )
@@ -167,7 +171,7 @@ class RoutingNode(Process):
             for router in self.routingnodes:
                 if router != self.address:
                     self.routingnodes[router].put((self.address, router,
-                        ('disconnect', self.localnodes.keys())))
+                        ('disconnect', self.address)))
 
             # stop all local nodes
             for node in self.localnodes:
