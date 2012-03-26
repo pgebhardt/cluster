@@ -13,6 +13,9 @@ class RoutingNode(Process):
         # set address
         self.address = '{}'.format(address)
 
+        # save key
+        self.key = key
+
         # verbose mode flag
         self.verbose = False
 
@@ -29,7 +32,7 @@ class RoutingNode(Process):
         self.port = port
 
         # create queue manager
-        self.queueManager = QueueThread(self.queue, self.port, key)
+        self.queueManager = QueueThread(self.queue, self.port, self.key)
 
         # list of commands
         self.commands = {}
@@ -213,7 +216,8 @@ class RoutingNode(Process):
 
             # answer
             queue.put((sender, address,
-                ('connect', self.address, self.ipAddress, self.port)))
+                ('connect', self.address, self.ipAddress,
+                    self.port, self.key)))
             queue.put((self.address, address,
                 ('local nodes', )))
 
