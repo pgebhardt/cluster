@@ -6,7 +6,7 @@ from node import Node
 
 
 class RoutingNode(Process):
-    def __init__(self, address):
+    def __init__(self, address, port=3000):
         # call base class init
         super(RoutingNode, self).__init__()
 
@@ -23,10 +23,24 @@ class RoutingNode(Process):
 
         # save ip address
         self.ipAddress = socket.gethostbyname(socket.gethostname())
-        self.port = 3000 + address
+        self.port = port
 
         # create queue manager
         self.queueManager = QueueThread(self.queue, self.port)
+
+        # list of commands
+        self.commands = {}
+
+        # register standard commands
+        self.register_command('new node', self.new_node)
+        self.register_command('local nodes', self.local_nodes)
+        self.register_command('local node list', self.local_node_list)
+        self.register_command('remote nodes', self.remote_nodes)
+        self.register_command('routing nodes', self.routing_nodes)
+        self.register_command('connect', self.connect)
+        self.register_command('disconnect', self.disconnect)
+        self.register_command('stop', self.stop_)
+        self.register_command('unsupported command', self.unsupported_command)
 
     def run(self):
         # start queue manager
@@ -63,138 +77,143 @@ class RoutingNode(Process):
                 print 'terminating router {}'.format(self.address)
                 return
 
-
     def on_message(self, sender, message):
-        # create answer
-        answer = None
-
-        # check messages
-        if message[0] == 'new node':
-            # new node address
-            address = self.address + len(self.localnodes) + 1
-
-            # create new Node
-            if len(message) == 2:
-                node = message[1](address)
+        # try execute command
+        try:
+            # check length of message
+            if len(message) == 1:
+                return self.commands[message[0]](sender)
             else:
-                node = Node(address)
+                return self.commands[message[0]](sender, *message[1:])
 
-            # create node connection
-            parent, child = Pipe()
-
-            # save connection
-            self.localnodes[address] = parent
-
-            # start node
-            node.start(child, self.queue)
-
-            # broadcast list of local nodes
-            for router in self.routingnodes:
-                # check address
-                if router != self.address:
-                    self.queue.put((self.address, router,
-                        ('local node list', self.localnodes.keys())))
-
-            # create answer
-            answer = ('node {} created'.format(address), )
-
-        elif message[0] == 'local nodes':
-            # list of local nodes
-            answer = ('local node list', self.localnodes.keys())
-
-        elif message[0] == 'local node list':
-            # add remote nodes to dict
-            for node in message[1]:
-                self.remotenodes[node] = self.routingnodes[sender]
-
-        elif message[0] == 'remote nodes':
-            # list of remote nodes
-            answer = ('remote node list', self.remotenodes.keys())
-
-        elif message[0] == 'routing nodes':
-            # list of routing nodes
-            answer = ('routing node list', self.routingnodes.keys())
-
-        elif message[0] == 'connect':
-            # connect to routing node
-            if not message[1] in self.routingnodes:
-                try:
-                    # create queue manager
-                    class QueueManager(BaseManager): pass
-                    QueueManager.register('get_queue')
-                    queueManager = QueueManager(address=(
-                        message[2], message[3]), authkey='bla')
-
-                    # connect
-                    queueManager.connect()
-                    queue = queueManager.get_queue()
-                except:
-                    # inform about failure
-                    answer = ('unable to connect to: {}'.format(
-                        message[1:]), )
-                    return answer
-
-                # add new remote node
-                self.routingnodes[message[1]] = queue
-
-                # answer
-                queue.put((sender, message[1],
-                    ('connect', self.address, self.ipAddress, self.port)))
-                queue.put((self.address, message[1],
-                    ('local nodes', )))
-
-                # inform about success
-                answer = ('connected to {}'.format(message[1]), )
-
-            else:
-                # inform
-                answer = ('allready connected to {}'.format(message[1]), )
-
-        elif message[0] == 'disconnect':
-            # check for own address
-            if sender == self.address:
-                return None
-
-            # gather all relevant nodes
-            toDelete = []
-            for node in self.remotenodes:
-                if self.remotenodes[node] == self.routingnodes[message[1]]:
-                    toDelete.append(node)
-
-            # delete all connected remote nodes
-            for node in toDelete:
-                # delete node
-                del self.remotenodes[node]
-
-            # remove routingnodes
-            del self.routingnodes[message[1]]
-
-            # create answer
-            answer = ('disconnected from {}'.format(message[1]), )
-
-        elif message[0] == 'stop':
-            # inform all connected routing nodes
-            for router in self.routingnodes:
-                if router != self.address:
-                    self.routingnodes[router].put((self.address, router,
-                        ('disconnect', self.address)))
-
-            # stop all local nodes
-            for node in self.localnodes:
-                self.localnodes[node].send((self.address, node, ('stop', )))
-
-            # create answer
-            answer = ('router stopped', )
-
-        elif message[0] == 'unsupported command':
-            # output error
-            print "Error: '{}' not supported by {}".format(
-                message[1], sender)
-        else:
+        except:
             # answer
-            answer = ('unsupported command', message)
+            return ('unsupported command', message)
 
-        return answer
+    def register_command(self, command, callable):
+        # add command to dict
+        self.commands[command] = callable
+
+    def new_node(self, sender, nodeClass=Node):
+        # new node address
+        address = self.address + len(self.localnodes) + 1
+
+        # create new Node
+        node = nodeClass(address)
+
+        # create node connection
+        parent, child = Pipe()
+
+        # save connection
+        self.localnodes[address] = parent
+
+        # start node
+        node.start(child, self.queue)
+
+        # broadcast list of local nodes
+        for router in self.routingnodes:
+            # check address
+            if router != self.address:
+                self.queue.put((self.address, router,
+                    ('local node list', self.localnodes.keys())))
+
+        # create answer
+        print 'new node'
+        return ('node {} created'.format(address), )
+
+    def local_nodes(self, sender):
+        # list of local nodes
+        return ('local node list', self.localnodes.keys())
+
+    def local_node_list(self, sender, remoteNodes):
+        # add remote nodes to dict
+        for node in remoteNodes:
+            self.remotenodes[node] = self.routingnodes[sender]
+
+    def remote_nodes(self, sender):
+        # list of remote nodes
+        return ('remote node list', self.remotenodes.keys())
+
+    def routing_nodes(self, sender):
+        # list of routing nodes
+        return ('routing node list', self.routingnodes.keys())
+
+    def connect(self, sender, address, ipAddress, port):
+        # connect to routing node
+        if not address in self.routingnodes:
+            try:
+                # create queue manager
+                class QueueManager(BaseManager):
+                    pass
+                QueueManager.register('get_queue')
+                queueManager = QueueManager(address=(
+                    ipAddress, port), authkey='bla')
+
+                # connect
+                queueManager.connect()
+                queue = queueManager.get_queue()
+            except:
+                # inform about failure
+                answer = ('unable to connect to: {}'.format(
+                    (address, ipAddress, port)), )
+                return answer
+
+            # add new remote node
+            self.routingnodes[address] = queue
+
+            # answer
+            queue.put((sender, address,
+                ('connect', self.address, self.ipAddress, self.port)))
+            queue.put((self.address, address,
+                ('local nodes', )))
+
+            # inform about success
+            return ('connected to {}'.format(address), )
+
+        else:
+            # inform
+            return ('allready connected to {}'.format(address), )
+
+    def disconnect(self, sender, address):
+        # check for own address
+        if sender == self.address:
+            return None
+
+        # gather all relevant nodes
+        toDelete = []
+        for node in self.remotenodes:
+            if self.remotenodes[node] == self.routingnodes[address]:
+                toDelete.append(node)
+
+        # delete all connected remote nodes
+        for node in toDelete:
+            # delete node
+            del self.remotenodes[node]
+
+        # remove routingnodes
+        del self.routingnodes[address]
+
+        # create answer
+        return ('disconnected from {}'.format(address), )
+
+    def stop_(self, sender):
+        # inform all connected routing nodes
+        for router in self.routingnodes:
+            if router != self.address:
+                self.routingnodes[router].put((self.address, router,
+                    ('disconnect', self.address)))
+
+        # stop all local nodes
+        for node in self.localnodes:
+            self.localnodes[node].send((self.address, node, ('stop', )))
+
+        # create answer
+        return ('router stopped', )
+
+    def unsupported_command(self, sender, command):
+        # output error
+        print "Error: '{}' not supported by {}".format(
+            command, sender)
 
 
 class QueueThread(Thread):
@@ -206,7 +225,8 @@ class QueueThread(Thread):
         self.queue = queue
 
         # init queue mananger
-        class QueueManager(BaseManager): pass
+        class QueueManager(BaseManager):
+            pass
 
         QueueManager.register('get_queue', callable=lambda: self.queue)
         self.manager = QueueManager(address=('', port), authkey='bla')
