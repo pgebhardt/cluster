@@ -46,6 +46,7 @@ class Shell(object):
                 recever, message = eval(userInput)
 
             except:
+                print 'invalid input'
                 continue
 
             # send input message to routing node
