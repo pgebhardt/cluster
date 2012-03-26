@@ -13,6 +13,9 @@ class RoutingNode(Process):
         # set address
         self.address = '{}'.format(address)
 
+        # verbose mode flag
+        self.verbose = False
+
         # create message queue
         self.queue = Queue()
 
@@ -38,6 +41,7 @@ class RoutingNode(Process):
         self.register_command('local node list', self.local_node_list)
         self.register_command('remote nodes', self.remote_nodes)
         self.register_command('routing nodes', self.routing_nodes)
+        self.register_command('verbose', self.setVerbose)
         self.register_command('connect', self.connect)
         self.register_command('disconnect', self.disconnect)
         self.register_command('stop', self.stop_)
@@ -51,6 +55,10 @@ class RoutingNode(Process):
         while 1:
             # get incoming messages
             sender, reciever, message = self.queue.get()
+
+            # output complete message throughput if in verbose mode
+            if self.verbose:
+                print "{} sent '{}' to {}".format(sender, message, reciever)
 
             # check reciever
             if reciever == self.address:
@@ -172,6 +180,13 @@ class RoutingNode(Process):
     def routing_nodes(self, sender):
         # list of routing nodes
         return ('routing node list', self.routingnodes.keys())
+
+    def setVerbose(self, sender, verbose):
+        # set verbose mode
+        self.verbose = verbose
+
+        # inform sender
+        return ('verbose mode set', verbose)
 
     def connect(self, sender, address, ipAddress, port):
         # connect to routing node
