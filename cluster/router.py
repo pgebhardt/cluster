@@ -118,7 +118,6 @@ class RoutingNode(Process):
                     ('local node list', self.localnodes.keys())))
 
         # create answer
-        print 'new node'
         return ('node {} created'.format(address), )
 
     def local_nodes(self, sender):

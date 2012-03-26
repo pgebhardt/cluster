@@ -1,4 +1,3 @@
-from multiprocessing import Pipe
 from router import RoutingNode
 from node import Node
 import readline
@@ -10,13 +9,14 @@ class ShellNode(Node):
         # report answers
         print '{} answers: {}'.format(sender, message)
 
+
 class Shell(object):
-    def __init__(self, address):
+    def __init__(self, address, port):
         # call base class init
         super(Shell, self).__init__()
 
         # create router
-        self.router = RoutingNode(address)
+        self.router = RoutingNode(address, port)
 
         # add prining node
         self.router.queue.put((-1, self.router.address,

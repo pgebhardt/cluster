@@ -14,7 +14,7 @@ def main():
         port = 3000
 
     # create node
-    node = cluster.RoutingNode(address, port)
+    node = cluster.Shell(address, port)
 
     # start node
     node.start()
