@@ -45,6 +45,7 @@ class RoutingNode(Process):
         self.register_command('remote nodes', self.remote_nodes)
         self.register_command('routing nodes', self.routing_nodes)
         self.register_command('verbose', self.setVerbose)
+        self.register_command('broadcast', self.broadcast)
         self.register_command('connect', self.connect)
         self.register_command('disconnect', self.disconnect)
         self.register_command('stop', self.stop_)
@@ -165,8 +166,7 @@ class RoutingNode(Process):
                     self.routingnodes[router].put(
                         (sender, router, ('delete node', node)))
 
-        # delete node form list
-        if node in self.localnodes:
+            # delete node form list
             del self.localnodes[node]
 
         elif node in self.remotenodes:
@@ -201,6 +201,15 @@ class RoutingNode(Process):
 
         # inform sender
         return ('verbose mode set', verbose)
+
+    def broadcast(self, sender, message):
+        # send message to all local nodes
+        for node in self.localnodes:
+            self.localnodes[node].send((sender, node, message))
+
+        # send message to all remote nodes
+        for node in self.remotenodes:
+            self.remotenodes[node].put((sender, node, message))
 
     def connect(self, sender, address, ipAddress, port, key):
         # connect to routing node
@@ -283,7 +292,7 @@ class RoutingNode(Process):
 
     def error(self, sender, message):
         # output error
-        print 'Error: {}'.format(message)
+        print '{}: Error: {}'.format(self.address, message)
 
 
 class QueueThread(Thread):

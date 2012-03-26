@@ -25,6 +25,7 @@ class Node(Process):
 
             # check for termination
             if message[0] == 'stop':
+                # TODO
                 # inform router to delete node
                 self.output.put((self.address, self.routerAddress,
                     ('delete node', self.address)))
@@ -74,7 +75,7 @@ class Node(Process):
 
     def error(self, sender, message):
         # output error
-        print 'Error: {}'.format(message)
+        print '{}: Error: {}'.format(self.address, message)
 
     def start(self, input, output):
         # save input and output
