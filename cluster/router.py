@@ -86,15 +86,16 @@ class RoutingNode(Process):
             elif reciever in self.routingnodes:
                 self.routingnodes[reciever].put((sender, reciever, message))
 
-            elif sender in self.localnodes or sender in self.remotenodes \
-                or sender in self.routingnodes:
-                self.queue.put((self.address, sender,
-                    ('error', ('not connected', reciever))))
+            # TODO
+            #elif sender in self.localnodes or sender in self.remotenodes \
+            #    or sender in self.routingnodes:
+            #    self.queue.put((self.address, sender,
+            #        ('error', ('not connected', reciever))))
 
-            else:
+            #else:
                 # corrupted message
-                print 'corrupted message: {}'.format(
-                    (sender, reciever, message))
+            #    print 'corrupted message: {}'.format(
+            #        (sender, reciever, message))
 
             # check message for termination
             if message[0] == 'router stopped' and sender == self.address:
