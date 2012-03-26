@@ -2,12 +2,13 @@ from multiprocessing import Process
 
 
 class Node(Process):
-    def __init__(self, address=-1):
+    def __init__(self, address='-1.-1'):
         # call base class init
         super(Node, self).__init__()
 
         # set address
         self.address = address
+        self.routerAddress = address.split('.')[0]
 
     def run(self):
         # main loop
@@ -17,7 +18,14 @@ class Node(Process):
 
             # check for termination
             if message[0] == 'stop':
+                # inform router to delete node
+                self.output.put((self.address, self.routerAddress,
+                    ('delete node', self.address)))
+
+                # output termination
                 print 'terminating node {}'.format(self.address)
+
+                # stop process
                 return
 
             # check correct reciever

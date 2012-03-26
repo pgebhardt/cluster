@@ -205,10 +205,6 @@ class RoutingNode(Process):
             # inform about success
             return ('connected to', address)
 
-        else:
-            # inform
-            return ('allready connected', address)
-
     def disconnect(self, sender, address):
         # check for correct address
         if address in self.routingnodes and address != self.address:
