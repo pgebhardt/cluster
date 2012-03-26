@@ -49,6 +49,7 @@ class RoutingNode(Process):
         self.register_command('disconnect', self.disconnect)
         self.register_command('stop', self.stop_)
         self.register_command('unsupported command', self.unsupported_command)
+        self.register_command('error', self.error)
 
     def run(self):
         # start queue manager
@@ -162,7 +163,7 @@ class RoutingNode(Process):
             del self.remotenodes[node]
 
         else:
-            return ('not connected', node)
+            return ('error', 'not connected', node)
 
         # report success
         return ('node deleted', node)
@@ -207,7 +208,7 @@ class RoutingNode(Process):
                 queue = queueManager.get_queue()
             except:
                 # inform about failure
-                answer = ('unable to connect',
+                answer = ('error', 'unable to connect',
                     (address, ipAddress, port))
                 return answer
 
@@ -249,7 +250,7 @@ class RoutingNode(Process):
             return ('disconnected', address)
 
         else:
-            return ('not connected', address)
+            return ('error', 'not connected', address)
 
     def stop_(self, sender):
         # inform all connected routing nodes
@@ -267,8 +268,12 @@ class RoutingNode(Process):
 
     def unsupported_command(self, sender, command):
         # output error
-        print "Error: '{}' not supported by {}".format(
-            command, sender)
+        self.error(sender, "'{}' not supported by {}".format(
+            command, sender))
+
+    def error(self, sender, message):
+        # output error
+        print 'Error: {}'.format(message, sender)
 
 
 class QueueThread(Thread):
