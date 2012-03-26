@@ -103,6 +103,10 @@ class RoutingNode(Process):
         # new node address
         address = self.address + len(self.localnodes) + 1
 
+        # check for used address
+        while address in self.localnodes:
+            address += 1
+
         # create new Node
         node = nodeClass(address)
 
