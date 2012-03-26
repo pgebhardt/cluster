@@ -33,6 +33,7 @@ class RoutingNode(Process):
 
         # register standard commands
         self.register_command('new node', self.new_node)
+        self.register_command('delete node', self.delete_node)
         self.register_command('local nodes', self.local_nodes)
         self.register_command('local node list', self.local_node_list)
         self.register_command('remote nodes', self.remote_nodes)
@@ -83,6 +84,10 @@ class RoutingNode(Process):
             # check length of message
             if len(message) == 1:
                 return self.commands[message[0]](sender)
+
+            elif len(message) == 2:
+                return self.commands[message[0]](sender, message[1])
+
             else:
                 return self.commands[message[0]](sender, *message[1:])
 
@@ -118,7 +123,32 @@ class RoutingNode(Process):
                     ('local node list', self.localnodes.keys())))
 
         # create answer
-        return ('node {} created'.format(address), )
+        return ('node created', address)
+
+    def delete_node(self, sender, node):
+        # stop node if local
+        if node in self.localnodes:
+            # stop node
+            self.localnodes[node].send((self.address, node, ('stop', )))
+
+            # tell all router to delete node
+            for router in self.routingnodes:
+                if router != self.address:
+                    self.routingnodes[router].put(
+                        (sender, router, ('delete node', node)))
+
+        # delete node form list
+        if node in self.localnodes:
+            del self.localnodes[node]
+
+        elif node in self.remotenodes:
+            del self.remotenodes[node]
+
+        else:
+            return ('not connected', node)
+
+        # report success
+        return ('node deleted', node)
 
     def local_nodes(self, sender):
         # list of local nodes
@@ -153,8 +183,8 @@ class RoutingNode(Process):
                 queue = queueManager.get_queue()
             except:
                 # inform about failure
-                answer = ('unable to connect to: {}'.format(
-                    (address, ipAddress, port)), )
+                answer = ('unable to connect',
+                    (address, ipAddress, port))
                 return answer
 
             # add new remote node
@@ -167,11 +197,11 @@ class RoutingNode(Process):
                 ('local nodes', )))
 
             # inform about success
-            return ('connected to {}'.format(address), )
+            return ('connected to', address)
 
         else:
             # inform
-            return ('allready connected to {}'.format(address), )
+            return ('allready connected', address)
 
     def disconnect(self, sender, address):
         # check for own address
@@ -193,7 +223,7 @@ class RoutingNode(Process):
         del self.routingnodes[address]
 
         # create answer
-        return ('disconnected from {}'.format(address), )
+        return ('disconnected', address)
 
     def stop_(self, sender):
         # inform all connected routing nodes
