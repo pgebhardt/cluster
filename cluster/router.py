@@ -11,7 +11,7 @@ class RoutingNode(Process):
         super(RoutingNode, self).__init__()
 
         # set address
-        self.address = address
+        self.address = '{}'.format(address)
 
         # create message queue
         self.queue = Queue()
@@ -101,11 +101,13 @@ class RoutingNode(Process):
 
     def new_node(self, sender, nodeClass=Node):
         # new node address
-        address = self.address + len(self.localnodes) + 1
+        localAddress = len(self.localnodes) + 1
+        address = '{}.{}'.format(self.address, localAddress)
 
         # check for used address
         while address in self.localnodes:
-            address += 1
+            localAddress += 1
+            address = '{}.{}'.format(self.address, localAddress)
 
         # create new Node
         node = nodeClass(address)
@@ -208,26 +210,31 @@ class RoutingNode(Process):
             return ('allready connected', address)
 
     def disconnect(self, sender, address):
-        # check for own address
-        if sender == self.address:
-            return None
+        # check for correct address
+        if address in self.routingnodes and address != self.address:
+            # gather all relevant nodes
+            toDelete = []
+            for node in self.remotenodes:
+                if self.remotenodes[node] == self.routingnodes[address]:
+                    toDelete.append(node)
 
-        # gather all relevant nodes
-        toDelete = []
-        for node in self.remotenodes:
-            if self.remotenodes[node] == self.routingnodes[address]:
-                toDelete.append(node)
+            # delete all connected remote nodes
+            for node in toDelete:
+                # delete node
+                del self.remotenodes[node]
 
-        # delete all connected remote nodes
-        for node in toDelete:
-            # delete node
-            del self.remotenodes[node]
+            # inform remote to disconnect
+            self.routingnodes[address].put((self.address, address,
+                ('disconnect', self.address)))
 
-        # remove routingnodes
-        del self.routingnodes[address]
+            # remove routingnodes
+            del self.routingnodes[address]
 
-        # create answer
-        return ('disconnected', address)
+            # create answer
+            return ('disconnected', address)
+
+        else:
+            return ('not connected', address)
 
     def stop_(self, sender):
         # inform all connected routing nodes

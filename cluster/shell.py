@@ -22,6 +22,9 @@ class Shell(object):
         self.router.queue.put((-1, self.router.address,
             ('new node', ShellNode)))
 
+        # save shell address
+        self.address = '{}.1'.format(address)
+
         # start router
         self.router.start()
 
@@ -46,12 +49,12 @@ class Shell(object):
                 continue
 
             # send input message to routing node
-            self.router.queue.put((self.router.address + 1,
+            self.router.queue.put((self.address,
                 recever, message))
 
             # wait a bit
             time.sleep(0.2)
 
         # stop router
-        self.router.queue.put((self.router.address + 1,
+        self.router.queue.put((self.address,
             self.router.address, ('stop', )))
