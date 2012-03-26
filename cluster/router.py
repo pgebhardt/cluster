@@ -85,6 +85,16 @@ class RoutingNode(Process):
             elif reciever in self.routingnodes:
                 self.routingnodes[reciever].put((sender, reciever, message))
 
+            elif sender in self.localnodes or sender in self.remotenodes \
+                or sender in self.routingnodes:
+                self.queue.put((self.address, sender,
+                    ('error', ('not connected', reciever))))
+
+            else:
+                # corrupted message
+                print 'corrupted message: {}'.format(
+                    (sender, reciever, message))
+
             # check message for termination
             if message[0] == 'router stopped' and sender == self.address:
                 print 'terminating router {}'.format(self.address)
@@ -163,7 +173,7 @@ class RoutingNode(Process):
             del self.remotenodes[node]
 
         else:
-            return ('error', 'not connected', node)
+            return ('error', ('not connected', node))
 
         # report success
         return ('node deleted', node)
@@ -250,7 +260,7 @@ class RoutingNode(Process):
             return ('disconnected', address)
 
         else:
-            return ('error', 'not connected', address)
+            return ('error', ('not connected', address))
 
     def stop_(self, sender):
         # inform all connected routing nodes
@@ -273,7 +283,7 @@ class RoutingNode(Process):
 
     def error(self, sender, message):
         # output error
-        print 'Error: {}'.format(message, sender)
+        print 'Error: {}'.format(message)
 
 
 class QueueThread(Thread):

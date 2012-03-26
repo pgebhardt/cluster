@@ -15,6 +15,7 @@ class Node(Process):
 
         # register standard commands
         self.register_command('print', self.print_)
+        self.register_command('error', self.error)
 
     def run(self):
         # main loop
@@ -70,6 +71,10 @@ class Node(Process):
 
     def print_(self, sender, string):
         print string
+
+    def error(self, sender, message):
+        # output error
+        print 'Error: {}'.format(message)
 
     def start(self, input, output):
         # save input and output

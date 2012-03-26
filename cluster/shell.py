@@ -18,12 +18,12 @@ class Shell(object):
         # create router
         self.router = RoutingNode(address, port)
 
-        # add prining node
-        self.router.queue.put((-1, self.router.address,
-            ('new node', ShellNode)))
-
         # save shell address
         self.address = '{}.1'.format(address)
+
+        # add prining node
+        self.router.queue.put((self.address, self.router.address,
+            ('new node', ShellNode)))
 
         # start router
         self.router.start()
@@ -53,7 +53,7 @@ class Shell(object):
                 recever, message))
 
             # wait a bit
-            time.sleep(0.2)
+            time.sleep(0.5)
 
         # stop router
         self.router.queue.put((self.address,
