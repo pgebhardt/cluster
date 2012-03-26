@@ -6,7 +6,7 @@ from node import Node
 
 
 class RoutingNode(Process):
-    def __init__(self, address, port=3000):
+    def __init__(self, address, port=3000, key='bla'):
         # call base class init
         super(RoutingNode, self).__init__()
 
@@ -29,7 +29,7 @@ class RoutingNode(Process):
         self.port = port
 
         # create queue manager
-        self.queueManager = QueueThread(self.queue, self.port)
+        self.queueManager = QueueThread(self.queue, self.port, key)
 
         # list of commands
         self.commands = {}
@@ -188,7 +188,7 @@ class RoutingNode(Process):
         # inform sender
         return ('verbose mode set', verbose)
 
-    def connect(self, sender, address, ipAddress, port):
+    def connect(self, sender, address, ipAddress, port, key):
         # connect to routing node
         if not address in self.routingnodes:
             try:
@@ -197,7 +197,7 @@ class RoutingNode(Process):
                     pass
                 QueueManager.register('get_queue')
                 queueManager = QueueManager(address=(
-                    ipAddress, port), authkey='bla')
+                    ipAddress, port), authkey=key)
 
                 # connect
                 queueManager.connect()
@@ -268,7 +268,7 @@ class RoutingNode(Process):
 
 
 class QueueThread(Thread):
-    def __init__(self, queue, port=3000):
+    def __init__(self, queue, port=3000, key='bla'):
         # call base class init
         super(QueueThread, self).__init__()
 
@@ -280,7 +280,7 @@ class QueueThread(Thread):
             pass
 
         QueueManager.register('get_queue', callable=lambda: self.queue)
-        self.manager = QueueManager(address=('', port), authkey='bla')
+        self.manager = QueueManager(address=('', port), authkey=key)
 
     def run(self):
         # get server
