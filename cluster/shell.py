@@ -1,6 +1,7 @@
 from router import RoutingNode
 from node import Node
 import readline
+from datetime import datetime
 import time
 import numpy
 
@@ -32,7 +33,8 @@ class NumpyNode(Node):
 class ShellNode(Node):
     def on_message(self, sender, message):
         # report answers
-        print '{} answers: {}'.format(sender, message)
+        print "{} answers: '{}' at {}".format(sender, message,
+            datetime.now())
 
 
 class Shell(object):

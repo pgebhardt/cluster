@@ -1,6 +1,7 @@
 from multiprocessing import Process, Pipe, Queue
 from multiprocessing.managers import BaseManager
 from threading import Thread
+from datetime import datetime
 import socket
 from node import Node
 
@@ -63,7 +64,8 @@ class RoutingNode(Process):
 
             # output complete message throughput if in verbose mode
             if self.verbose:
-                print "{} sent '{}' to {}".format(sender, message, reciever)
+                print "{} sent '{}' to {} at {}".format(sender, message,
+                    reciever, datetime.now())
 
             # check reciever
             if reciever == self.address:
