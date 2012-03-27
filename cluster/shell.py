@@ -45,7 +45,6 @@ class Shell(object):
     def start(self):
         # wait a bit
         time.sleep(1)
-        self.router.queue.put((self.address, '1', ('new node', NumpyNode)))
 
         # main loop
         while True:
