@@ -27,7 +27,11 @@ class NumpyNode(Node):
             self.output.put((self.address, listener, ('calc', result)))
 
     def add_listener(self, sender, listener):
+        # add new listener
         self.listener.append(listener)
+
+        # answer success
+        return ('listener added', listener)
 
 
 class ShellNode(Node):
