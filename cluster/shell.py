@@ -10,12 +10,23 @@ class NumpyNode(Node):
         # call base class init
         super(NumpyNode, self).__init__(address)
 
+        # listener list
+        self.listener = []
+
         # register calc
         self.register_command('calc', self.calc)
+        self.register_command('add listener', self.add_listener)
 
-    def calc(self, sender):
+    def calc(self, sender, input):
         # calc array
-        return 2 * numpy.ones((5, 5))
+        result = 2 * numpy.ones((5, 5)) * input
+
+        # dispatch to all listener
+        for listener in self.listener:
+            self.output.put((self.address, listener, ('calc', result)))
+
+    def add_listener(self, sender, listener):
+        self.listener.append(listener)
 
 
 class ShellNode(Node):
