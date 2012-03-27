@@ -2,6 +2,20 @@ from router import RoutingNode
 from node import Node
 import readline
 import time
+import numpy
+
+
+class NumpyNode(Node):
+    def __init__(self, address='-1.-1'):
+        # call base class init
+        super(NumpyNode, self).__init__(address)
+
+        # register calc
+        self.register_command('calc', self.calc)
+
+    def calc(self, sender):
+        # calc array
+        return 2 * numpy.ones((5, 5))
 
 
 class ShellNode(Node):
@@ -30,7 +44,8 @@ class Shell(object):
 
     def start(self):
         # wait a bit
-        time.sleep(0.2)
+        time.sleep(1)
+        self.router.queue.put((self.address, '1', ('new node', NumpyNode)))
 
         # main loop
         while True:

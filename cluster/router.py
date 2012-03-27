@@ -133,8 +133,12 @@ class RoutingNode(Process):
             localAddress += 1
             address = '{}.{}'.format(self.address, localAddress)
 
-        # create new Node
-        node = nodeClass(address)
+        try:
+            # create new Node
+            node = nodeClass(address)
+        except:
+            print 'geht nicht'
+            return
 
         # create node connection
         parent, child = Pipe()
