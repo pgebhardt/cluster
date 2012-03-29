@@ -28,6 +28,9 @@ class RoutingNode(Process):
         self.remotenodes = {}
         self.routingnodes = {self.address: self.queue}
 
+        # dict of node classes
+        self.nodeClasses = {'Node': Node}
+
         # save ip address
         self.ipAddress = socket.gethostbyname(socket.gethostname())
         self.port = port
