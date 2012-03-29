@@ -88,13 +88,10 @@ class Neuron(cluster.Node):
                 weights.append(self.weights[predecessor])
                 inputs.append(self.inputs[predecessor])
 
-            print inputs, weights
             net = self.f_net(numpy.array(inputs), numpy.array(weights))
-            print net
 
             # calc new activation
             self.activation = self.f_act(net, self.threshold)
-            print self.activation
 
         # calc new output
         self.neuron_output = self.f_out(self.activation)

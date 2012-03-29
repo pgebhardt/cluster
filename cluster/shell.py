@@ -77,6 +77,9 @@ class Shell(object):
         # main loop
         while True:
             if script == None:
+                # wait a bit
+                time.sleep(0.5)
+
                 # get commands
                 userInput = raw_input('> ')
 
@@ -105,9 +108,6 @@ class Shell(object):
             # send input message to routing node
             self.router.queue.put((self.address,
                 recever, message))
-
-            # wait a bit
-            time.sleep(0.5)
 
         # stop router
         self.router.queue.put((self.address,
