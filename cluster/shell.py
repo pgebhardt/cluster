@@ -62,14 +62,29 @@ class Shell(object):
         # dict of node classes
         self.nodeClasses = {'Node': Node, 'ShellNode': ShellNode}
 
-    def start(self):
+    def start(self, script=None):
         # wait a bit
         time.sleep(1)
 
+        # split script
+        if not script is None:
+            scriptLines = script.split('\n')
+
         # main loop
         while True:
-            # get commands
-            userInput = raw_input('> ')
+            if script == None:
+                # get commands
+                userInput = raw_input('> ')
+
+            elif len(scriptLines) > 0:
+                userInput = scriptLines[0]
+
+                # delete first line
+                scriptLines.remove(scriptLines[0])
+
+            else:
+                script = None
+                continue
 
             # check for exir
             if userInput == 'quit' or userInput == 'exit':
@@ -80,7 +95,7 @@ class Shell(object):
                 recever, message = eval(userInput, self.nodeClasses)
 
             except:
-                print 'invalid input'
+                print "invalid input: '{}'".format(userInput)
                 continue
 
             # send input message to routing node

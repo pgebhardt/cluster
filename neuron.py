@@ -128,18 +128,26 @@ def main():
     address = int(sys.argv[1])
 
     # get port
-    if len(sys.argv) == 3:
-        port = int(sys.argv[2])
+    port = int(sys.argv[2])
 
-    else:
-        port = 3000
+    # get script
+    script = None
+
+    if len(sys.argv) == 4:
+        # open file
+        f = open(sys.argv[3])
+
+        try:
+            script = f.read()
+        finally:
+            f.close()
 
     # create node
     node = cluster.Shell(address, port)
     node.nodeClasses['Neuron'] = Neuron
 
     # start node
-    node.start()
+    node.start(script)
 
 
 if __name__ == '__main__':
