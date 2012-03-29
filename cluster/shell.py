@@ -19,12 +19,16 @@ class NumpyNode(Node):
         self.register_command('add listener', self.add_listener)
 
     def calc(self, sender, input):
+        # get input
+        message, input = input
+
         # calc array
         result = 2 * numpy.ones((5, 5)) * input
 
         # dispatch to all listener
         for listener in self.listener:
-            self.output.put((self.address, listener, ('calc', result)))
+            self.output.put((self.address, listener,
+                ('calc', ('result', result))))
 
     def add_listener(self, sender, listener):
         # add new listener
