@@ -60,11 +60,11 @@ class Shell(object):
         self.router.queue.put((self.address, self.router.address,
             ('new node', ShellNode)))
 
+        # add ShellNode to node dict
+        self.router.nodeClasses['ShellNode'] = ShellNode
+
         # start router
         self.router.start()
-
-        # add ShellNode to node dict
-        self.nodeClasses['ShellNode'] = ShellNode
 
     def start(self, script=None):
         # wait a bit
@@ -96,7 +96,7 @@ class Shell(object):
 
             # parse input
             try:
-                recever, message = eval(userInput, self.nodeClasses)
+                recever, message = eval(userInput, self.router.nodeClasses)
 
             except:
                 print "invalid input: '{}'".format(userInput)
