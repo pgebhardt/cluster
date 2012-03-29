@@ -59,6 +59,9 @@ class Shell(object):
         # start router
         self.router.start()
 
+        # dict of node classes
+        self.nodeClasses = {'Node': Node, 'ShellNode': ShellNode}
+
     def start(self):
         # wait a bit
         time.sleep(1)
@@ -74,7 +77,7 @@ class Shell(object):
 
             # parse input
             try:
-                recever, message = eval(userInput)
+                recever, message = eval(userInput, self.nodeClasses)
 
             except:
                 print 'invalid input'
