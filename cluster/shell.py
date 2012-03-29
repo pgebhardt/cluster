@@ -63,10 +63,10 @@ class Shell(object):
         # add ShellNode to node dict
         self.router.nodeClasses['ShellNode'] = ShellNode
 
+    def start(self, script=None):
         # start router
         self.router.start()
 
-    def start(self, script=None):
         # wait a bit
         time.sleep(1)
 
