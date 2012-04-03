@@ -121,7 +121,7 @@ class RoutingNode(Process):
 
             except:
                 # send error message
-                return ('error', 'Executing responder', sender, message)
+                return ('error', ('Executing responder', sender, message))
 
         # check for commands
         elif message[0] in self.commands:
@@ -139,7 +139,7 @@ class RoutingNode(Process):
 
                 except:
                     # send error message
-                    return ('error', 'Executing command', message)
+                    return ('error', ('Executing command', message))
 
         # unsupported command
         else:
