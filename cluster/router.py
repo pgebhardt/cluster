@@ -45,7 +45,6 @@ class RoutingNode(Process):
         self.register_command('new node', self.new_node)
         self.register_command('delete node', self.delete_node)
         self.register_command('local nodes', self.local_nodes)
-        self.register_command('local node list', self.local_node_list)
         self.register_command('remote nodes', self.remote_nodes)
         self.register_command('routing nodes', self.routing_nodes)
         self.register_command('verbose', self.setVerbose)
@@ -225,11 +224,6 @@ class RoutingNode(Process):
         # list of local nodes
         return ('local node list', self.localnodes.keys())
 
-    def local_node_list(self, sender, remoteNodes):
-        # add remote nodes to dict
-        for node in remoteNodes:
-            self.remotenodes[node] = self.routingnodes[sender]
-
     def remote_nodes(self, sender):
         # list of remote nodes
         return ('remote node list', self.remotenodes.keys())
@@ -277,15 +271,30 @@ class RoutingNode(Process):
             # add new remote node
             self.routingnodes[address] = queue
 
+            # responder
+            def connect_responder(sender, address):
+                print (sender, 'connected', address)
+
+            def local_node_responder(sender, remoteNodes):
+                # add remote nodes to dict
+                for node in remoteNodes:
+                    self.remotenodes[node] = self.routingnodes[sender]
+
+            # register responder
+            self.register_responder('connected', address,
+                connect_responder)
+            self.register_responder('local node list', address,
+                local_node_responder)
+
             # answer
-            queue.put((sender, address,
+            queue.put((self.address, address,
                 ('connect', self.address, self.ipAddress,
                     self.port, self.key)))
             queue.put((self.address, address,
                 ('local nodes', )))
 
             # inform about success
-            return ('connected to', address)
+            return ('connected', address)
 
     def disconnect(self, sender, address):
         # check for correct address
