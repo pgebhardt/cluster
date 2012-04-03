@@ -3,38 +3,39 @@ from node import Node
 import readline
 from datetime import datetime
 import time
-import numpy
 
 
-class NumpyNode(Node):
+class TestNode(Node):
     def __init__(self, address='-1.-1'):
         # call base class init
-        super(NumpyNode, self).__init__(address)
+        super(TestNode, self).__init__(address)
 
-        # listener list
+        # listener
         self.listener = []
 
-        # register calc
-        self.register_command('calc', self.calc)
+        # register command
         self.register_command('add listener', self.add_listener)
 
-    def calc(self, sender, input):
-        # get input
-        message, input = input
-
-        # calc array
-        result = 2 * numpy.ones((5, 5)) * input
-
-        # dispatch to all listener
-        for listener in self.listener:
-            self.output.put((self.address, listener,
-                ('calc', ('result', result))))
-
     def add_listener(self, sender, listener):
-        # add new listener
+        # check for listener
+        if listener in self.listener:
+            return None
+
+        # add listener
         self.listener.append(listener)
 
-        # answer success
+        # responder
+        def responder(sender, listener):
+            # print success
+            print (sender, listener)
+
+        # register responder
+        self.register_responder('listener added', listener, responder)
+
+        # let listener add self
+        self.output.put((self.address, listener,
+            ('add listener', self.address)))
+
         return ('listener added', listener)
 
 

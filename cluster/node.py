@@ -13,6 +13,9 @@ class Node(Process):
         # list of commands
         self.commands = {}
 
+        # list of responder
+        self.responder = {}
+
         # register standard commands
         self.register_command('print', self.print_)
         self.register_command('error', self.error)
@@ -25,7 +28,6 @@ class Node(Process):
 
             # check for termination
             if message[0] == 'stop':
-                # TODO
                 # inform router to delete node
                 self.output.put((self.address, self.routerAddress,
                     ('delete node', self.address)))
@@ -50,25 +52,58 @@ class Node(Process):
                     self.output.put((self.address, sender, answer))
 
     def on_message(self, sender, message):
-        # try execute command
-        try:
-            # check length of message
-            if len(message) == 1:
-                return self.commands[message[0]](sender)
+        # check for commands
+        if message[0] in self.commands:
+            # execute command
+                try:
+                    # check length of message
+                    if len(message) == 1:
+                        return self.commands[message[0]](sender)
 
-            elif len(message) == 2:
-                return self.commands[message[0]](sender, message[1])
+                    elif len(message) == 2:
+                        return self.commands[message[0]](sender, message[1])
 
-            else:
-                return self.commands[message[0]](sender, *message[1:])
+                    else:
+                        return self.commands[message[0]](sender, *message[1:])
 
-        except:
-            # answer
+                except:
+                    # send error message
+                    return ('error', 'Executing command', message)
+
+        # check for responder
+        elif (message[0], sender) in self.responder:
+            # execute responder
+            try:
+                # check length of message
+                if len(message) == 1:
+                    return self.responder[(message[0], sender)](sender)
+
+                elif len(message) == 2:
+                    return self.responder[(message[0], sender)](
+                        sender, message[1])
+
+                else:
+                    return self.responder[(message[0], sender)](
+                        sender, *message[1:])
+
+                # delete responder
+                del self.responder[(message[0], sender)]
+
+            except:
+                # send error message
+                return ('error', 'Executing responder', sender, message)
+
+        # unsupported command
+        else:
             return ('unsupported command', message)
 
     def register_command(self, command, callable):
         # add command to dict
         self.commands[command] = callable
+
+    def register_responder(self, command, sender, callable):
+        # add responder to dict
+        self.responder[(command, sender)] = callable
 
     def print_(self, sender, string):
         print string
