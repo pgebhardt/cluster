@@ -5,40 +5,6 @@ from datetime import datetime
 import time
 
 
-class TestNode(Node):
-    def __init__(self, address='-1.-1'):
-        # call base class init
-        super(TestNode, self).__init__(address)
-
-        # listener
-        self.listener = []
-
-        # register command
-        self.register_command('add listener', self.add_listener)
-
-    def add_listener(self, sender, listener):
-        # check for listener
-        if listener in self.listener:
-            return None
-
-        # add listener
-        self.listener.append(listener)
-
-        # responder
-        def responder(sender, listener):
-            # print success
-            print (sender, listener)
-
-        # register responder
-        self.register_responder('listener added', listener, responder)
-
-        # let listener add self
-        self.output.put((self.address, listener,
-            ('add listener', self.address)))
-
-        return ('listener added', listener)
-
-
 class ShellNode(Node):
     def on_message(self, sender, message):
         # report answers

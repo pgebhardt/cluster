@@ -52,26 +52,8 @@ class Node(Process):
                     self.output.put((self.address, sender, answer))
 
     def on_message(self, sender, message):
-        # check for commands
-        if message[0] in self.commands:
-            # execute command
-                try:
-                    # check length of message
-                    if len(message) == 1:
-                        return self.commands[message[0]](sender)
-
-                    elif len(message) == 2:
-                        return self.commands[message[0]](sender, message[1])
-
-                    else:
-                        return self.commands[message[0]](sender, *message[1:])
-
-                except:
-                    # send error message
-                    return ('error', 'Executing command', message)
-
         # check for responder
-        elif (message[0], sender) in self.responder:
+        if (message[0], sender) in self.responder:
             # execute responder
             try:
                 # check length of message
@@ -93,6 +75,24 @@ class Node(Process):
                 # send error message
                 return ('error', 'Executing responder', sender, message)
 
+        # check for commands
+        elif message[0] in self.commands:
+            # execute command
+                try:
+                    # check length of message
+                    if len(message) == 1:
+                        return self.commands[message[0]](sender)
+
+                    elif len(message) == 2:
+                        return self.commands[message[0]](sender, message[1])
+
+                    else:
+                        return self.commands[message[0]](sender, *message[1:])
+
+                except:
+                    # send error message
+                    return ('error', 'Executing command', message)
+
         # unsupported command
         else:
             return ('unsupported command', message)
@@ -104,6 +104,13 @@ class Node(Process):
     def register_responder(self, command, sender, callable):
         # add responder to dict
         self.responder[(command, sender)] = callable
+
+    def request(self, receiver, request, response, responder):
+        # register responder
+        self.register_responder(response, receiver, responder)
+
+        # send request
+        self.output.put((self.address, receiver, request))
 
     def print_(self, sender, string):
         print string

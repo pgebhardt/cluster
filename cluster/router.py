@@ -48,6 +48,7 @@ class RoutingNode(Process):
         self.register_command('new node', self.new_node)
         self.register_command('delete node', self.delete_node)
         self.register_command('local nodes', self.local_nodes)
+        self.register_command('local node list', self.local_node_list)
         self.register_command('remote nodes', self.remote_nodes)
         self.register_command('routing nodes', self.routing_nodes)
         self.register_command('verbose', self.setVerbose)
@@ -93,43 +94,14 @@ class RoutingNode(Process):
             elif reciever in self.routingnodes:
                 self.routingnodes[reciever].put((sender, reciever, message))
 
-            # TODO
-            #elif sender in self.localnodes or sender in self.remotenodes \
-            #    or sender in self.routingnodes:
-            #    self.queue.put((self.address, sender,
-            #        ('error', ('not connected', reciever))))
-
-            #else:
-                # corrupted message
-            #    print 'corrupted message: {}'.format(
-            #        (sender, reciever, message))
-
             # check message for termination
             if message[0] == 'router stopped' and sender == self.address:
                 print 'terminating router {}'.format(self.address)
                 return
 
     def on_message(self, sender, message):
-        # check for commands
-        if message[0] in self.commands:
-            # execute command
-                try:
-                    # check length of message
-                    if len(message) == 1:
-                        return self.commands[message[0]](sender)
-
-                    elif len(message) == 2:
-                        return self.commands[message[0]](sender, message[1])
-
-                    else:
-                        return self.commands[message[0]](sender, *message[1:])
-
-                except:
-                    # send error message
-                    return ('error', 'Executing command', message)
-
         # check for responder
-        elif (message[0], sender) in self.responder:
+        if (message[0], sender) in self.responder:
             # execute responder
             try:
                 # check length of message
@@ -151,6 +123,24 @@ class RoutingNode(Process):
                 # send error message
                 return ('error', 'Executing responder', sender, message)
 
+        # check for commands
+        elif message[0] in self.commands:
+            # execute command
+                try:
+                    # check length of message
+                    if len(message) == 1:
+                        return self.commands[message[0]](sender)
+
+                    elif len(message) == 2:
+                        return self.commands[message[0]](sender, message[1])
+
+                    else:
+                        return self.commands[message[0]](sender, *message[1:])
+
+                except:
+                    # send error message
+                    return ('error', 'Executing command', message)
+
         # unsupported command
         else:
             return ('unsupported command', message)
@@ -162,6 +152,13 @@ class RoutingNode(Process):
     def register_responder(self, command, sender, callable):
         # add responder to dict
         self.responder[(command, sender)] = callable
+
+    def request(self, receiver, request, response, responder):
+        # register responder
+        self.register_responder(response, receiver, responder)
+
+        # send request
+        self.queue.put((self.address, receiver, request))
 
     def new_node(self, sender, nodeClass=Node):
         # new node address
@@ -227,6 +224,11 @@ class RoutingNode(Process):
         # list of local nodes
         return ('local node list', self.localnodes.keys())
 
+    def local_node_list(self, sender, remoteNodes):
+        # add remote nodes to dict
+        for node in remoteNodes:
+            self.remotenodes[node] = self.routingnodes[sender]
+
     def remote_nodes(self, sender):
         # list of remote nodes
         return ('remote node list', self.remotenodes.keys())
@@ -276,25 +278,16 @@ class RoutingNode(Process):
 
             # responder
             def connect_responder(sender, address):
-                print (sender, 'connected', address)
+                pass
 
-            def local_node_responder(sender, remoteNodes):
-                # add remote nodes to dict
-                for node in remoteNodes:
-                    self.remotenodes[node] = self.routingnodes[sender]
-
-            # register responder
-            self.register_responder('connected', address,
+            # request connection
+            self.request(address, ('connect', self.address,
+                self.ipAddress, self.port, self.key), 'connected',
                 connect_responder)
-            self.register_responder('local node list', address,
-                local_node_responder)
 
-            # answer
-            queue.put((self.address, address,
-                ('connect', self.address, self.ipAddress,
-                    self.port, self.key)))
-            queue.put((self.address, address,
-                ('local nodes', )))
+            # request local nodes
+            self.request(address, ('local nodes', ), 'local node list',
+                self.local_node_list)
 
             # inform about success
             return ('connected', address)
