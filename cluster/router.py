@@ -186,15 +186,26 @@ class RoutingNode(Process):
         # start node
         node.start(child, self.queue)
 
+        # broadcast responder
+        self.completionCount = len(self.routingnodes) - 1
+
+        def responder(sender, nodes):
+            # decrement counter
+            self.completionCount -= 1
+
+            # answer completion
+            if self.completionCount <= 0:
+                # TODO
+                return ('node created', address)
+
         # broadcast list of local nodes
         for router in self.routingnodes:
             # check address
             if router != self.address:
-                self.queue.put((self.address, router,
-                    ('local node list', self.localnodes.keys())))
-
-        # create answer
-        return ('node created', address)
+                # request node update
+                self.request(router, ('local node list',
+                    self.localnodes.keys()), 'nodes connected',
+                    responder)
 
     def delete_node(self, sender, node):
         # stop node if local
@@ -228,6 +239,8 @@ class RoutingNode(Process):
         # add remote nodes to dict
         for node in remoteNodes:
             self.remotenodes[node] = self.routingnodes[sender]
+
+        return ('nodes connected', remoteNodes)
 
     def remote_nodes(self, sender):
         # list of remote nodes
@@ -280,6 +293,11 @@ class RoutingNode(Process):
             def connect_responder(sender, address):
                 pass
 
+            def local_node_responder(sender, nodes):
+                # add remote nodes to dict
+                for node in nodes:
+                    self.remotenodes[node] = self.routingnodes[sender]
+
             # request connection
             self.request(address, ('connect', self.address,
                 self.ipAddress, self.port, self.key), 'connected',
@@ -287,7 +305,7 @@ class RoutingNode(Process):
 
             # request local nodes
             self.request(address, ('local nodes', ), 'local node list',
-                self.local_node_list)
+                local_node_responder)
 
             # inform about success
             return ('connected', address)
