@@ -41,16 +41,16 @@ class Node(Process):
 
             # check for request
             if 'request' in message:
-                # call message handler
-                self.on_message(message)
+                # call request handler
+                self.on_request(message)
 
             elif 'response' in message:
                 # call response handler
-                self.responder[(message['response'], message['sender'])](
-                    message['sender'], *message['args'], **message['kargs'])
+                self.on_response(message)
 
-                # unregister responder
-                del self.responder[(message['response'], message['sender'])]
+            else:
+                # TODO
+                pass
 
     def request(self, receiver, responder, request, *args, **kargs):
         # register responder
@@ -76,7 +76,7 @@ class Node(Process):
         # add responder to dict
         self.responder[(request, reciever)] = responder
 
-    def on_message(self, message):
+    def on_request(self, message):
         # get request
         request = message['request']
 
@@ -91,6 +91,22 @@ class Node(Process):
                 # send response
                 self.respond(message['sender'],
                     message['request'], response)
+
+    def on_response(self, message):
+        # get response tuple
+        response = (message['response'], message['sender'])
+
+        # try execute responder
+        try:
+            self.responder[response](message['sender'],
+                *message['args'], **message['kargs'])
+
+            # delete responder
+            del self.responder[response]
+
+        except:
+            # TODO
+            pass
 
     def print_to_screen(self, sender, string):
         print string

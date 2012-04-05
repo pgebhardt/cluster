@@ -69,33 +69,31 @@ class RoutingNode(Process):
             receiver = message['receiver']
 
             # check reciever
-            if receiver == self.address:
-                # check for request
-                if 'request' in message:
-                    # call message handler
-                    self.on_message(message)
+            if receiver != self.address:
+                # send message
+                if receiver in self.localnodes:
+                    self.localnodes[receiver].send(message)
 
-                elif 'response' in message:
-                    # call response handler
-                    self.responder[(message['response'], message['sender'])](
-                        message['sender'], *message['args'],
-                        **message['kargs'])
+                elif receiver in self.remotenodes:
+                    self.remotenodes[receiver].put(message)
 
-                    # unregister responder
-                    del self.responder[(message['response'],
-                        message['sender'])]
+                elif receiver in self.routingnodes:
+                    self.routingnodes[receiver].put(message)
 
                 continue
 
-            # send message
-            if receiver in self.localnodes:
-                self.localnodes[receiver].send(message)
+            # check for request
+            if 'request' in message:
+                # call request handler
+                self.on_request(message)
 
-            elif receiver in self.remotenodes:
-                self.remotenodes[receiver].put(message)
+            elif 'response' in message:
+                # call response handler
+                self.on_response(message)
 
-            elif receiver in self.routingnodes:
-                self.routingnodes[receiver].put(message)
+            else:
+                # TODO
+                pass
 
     def request(self, receiver, responder, request, *args, **kargs):
         # register responder
@@ -121,7 +119,7 @@ class RoutingNode(Process):
         # add responder to dict
         self.responder[(request, reciever)] = responder
 
-    def on_message(self, message):
+    def on_request(self, message):
         # get request
         request = message['request']
 
@@ -136,6 +134,22 @@ class RoutingNode(Process):
                 # send response
                 self.respond(message['sender'],
                     message['request'], response)
+
+    def on_response(self, message):
+        # get response tuple
+        response = (message['response'], message['sender'])
+
+        # try execute responder
+        try:
+            self.responder[response](message['sender'],
+                *message['args'], **message['kargs'])
+
+            # delete responder
+            del self.responder[response]
+
+        except:
+            # TODO
+            pass
 
     def new_node(self, sender, nodeClass=Node):
         # new node address
