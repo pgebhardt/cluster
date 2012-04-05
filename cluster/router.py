@@ -42,13 +42,10 @@ class RoutingNode(Process):
         self.responder = {}
 
         # set running flag
-        self.running = True
+        self.running = False
 
     def start(self):
         if not self.running:
-            # start queue mananger
-            self.queueManager.start()
-
             # set running flag
             self.running = True
 
@@ -56,14 +53,17 @@ class RoutingNode(Process):
             super(RoutingNode, self).start()
 
     def run(self):
+        # start queue mananger
+        self.queueManager.start()
+
         # main loop
         while self.running:
             # get incoming messages
             message = self.queue.get()
 
             # output complete message throughput if in verbose mode
-            if self.verbose:
-                print '{} at {}'.format(message, datetime.now())
+            #if self.verbose:
+            print '{} at {}'.format(message, datetime.now())
 
             # get reciever
             receiver = message['receiver']
@@ -111,7 +111,7 @@ class RoutingNode(Process):
 
     def respond(self, reciever, request, *args, **kargs):
         # generate message
-        message = {'sender': self.address, 'reciever': reciever,
+        message = {'sender': self.address, 'receiver': reciever,
             'response': request, 'args': args, 'kargs': kargs}
 
         # send response
@@ -121,7 +121,7 @@ class RoutingNode(Process):
         # add responder to dict
         self.responder[(request, reciever)] = responder
 
-    def on_message(self, sender, message):
+    def on_message(self, message):
         # get request
         request = message['request']
 
@@ -130,8 +130,8 @@ class RoutingNode(Process):
             # check for callable
             if callable(getattr(self, request)):
                 # call method
-                response = getattr(self, request)(*message['args'],
-                    **message['kargs'])
+                response = getattr(self, request)(message['sender'],
+                    *message['args'], **message['kargs'])
 
                 # send response
                 self.respond(message['sender'],
@@ -163,28 +163,30 @@ class RoutingNode(Process):
         # start node
         node.start(child, self.queue)
 
-        # broadcast responder
-        self.completionCount = len(self.routingnodes) - 1
+        # broadcast new node
+        if len(self.routingnodes) == 1:
+            return localAddress
 
-        def responder(sender, nodes):
-            # decrement counter
-            self.completionCount -= 1
+        else:
+            self._count = len(self.routingnodes) - 1
 
-            # answer completion
-            if self.completionCount <= 0:
-                # TODO
-                return ('node created', address)
+            # responder
+            def responder(sender, remoteNodes):
+                # decrement count
+                self._count -= 1
 
-        # broadcast list of local nodes
-        for router in self.routingnodes:
-            # check address
-            if router != self.address:
-                # request node update
-                self.request(router, ('local node list',
-                    self.localnodes.keys()), 'nodes connected',
-                    responder)
+                # check for all router respond
+                if self._count <= 0:
+                    self.respond(sender, 'new_node', localAddress)
+
+            # request new node append
+            for router in self.routingnodes:
+                if router != self.address:
+                    self.request(router, 'local_node_list',
+                        self.localnodes.keys())
 
     def delete_node(self, sender, node):
+        # TODO
         # stop node if local
         if node in self.localnodes:
             # stop node
@@ -217,7 +219,7 @@ class RoutingNode(Process):
         for node in remoteNodes:
             self.remotenodes[node] = self.routingnodes[sender]
 
-        return ('nodes connected', remoteNodes)
+        return remoteNodes
 
     def remote_nodes(self, sender):
         # list of remote nodes
@@ -318,12 +320,15 @@ class RoutingNode(Process):
         # responder
         def responder(sender, response=None):
             # check for router and nodes to be deleted
-            if len(self.routingnodes) == 0 and \
+            if len(self.routingnodes) == 1 and \
                 len(self.localnodes) == 0:
                 # set running flag
                 self.running = False
 
                 print 'router stopped'
+
+        # check for router and nodes
+        responder(self.address)
 
         # inform all connected routing nodes
         for router in self.routingnodes:

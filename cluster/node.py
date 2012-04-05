@@ -66,7 +66,7 @@ class Node(Process):
 
     def respond(self, reciever, request, *args, **kargs):
         # generate message
-        message = {'sender': self.address, 'reciever': reciever,
+        message = {'sender': self.address, 'receiver': reciever,
             'response': request, 'args': args, 'kargs': kargs}
 
         # send response
@@ -85,19 +85,19 @@ class Node(Process):
             # check for callable
             if callable(getattr(self, request)):
                 # call method
-                response = getattr(self, request)(*message['args'],
-                    **message['kargs'])
+                response = getattr(self, request)(message['sender'],
+                    *message['args'], **message['kargs'])
 
                 # send response
                 self.respond(message['sender'],
                     message['request'], response)
 
-    def print_to_screen(self, string):
+    def print_to_screen(self, sender, string):
         print string
 
         return None
 
-    def stop(self):
+    def stop(self, sender):
         # set running flag
         self.running = False
 
