@@ -6,10 +6,10 @@ import time
 
 
 class ShellNode(Node):
-    def on_message(self, sender, message):
+    def on_response(self, message):
         # report answers
-        print "{} answers: '{}' at {}".format(sender, message,
-            datetime.now())
+        print "{} answers '{}' to '{}' at {}".format(message['sender'],
+            message['args'], message['response'], datetime.now())
 
 
 class Shell(object):
@@ -24,8 +24,9 @@ class Shell(object):
         self.address = '{}.1'.format(address)
 
         # add prining node
-        self.router.queue.put((self.address, self.router.address,
-            ('new node', ShellNode)))
+        self.router.queue.put({'sender': self.address,
+            'receiver': self.router.address, 'request': 'new_node',
+            'args': [ShellNode], 'kargs': {}})
 
         # add ShellNode to node dict
         self.router.nodeClasses['ShellNode'] = ShellNode
@@ -63,19 +64,21 @@ class Shell(object):
 
             # parse input
             try:
-                recever, message = eval(userInput, self.router.nodeClasses)
+                receiver, request, args = eval(userInput, self.router.nodeClasses)
 
             except:
                 print "invalid input: '{}'".format(userInput)
                 continue
 
             # send input message to routing node
-            self.router.queue.put((self.address,
-                recever, message))
+            self.router.queue.put({'sender': self.address,
+                'receiver': receiver, 'request': request,
+                'args': args, 'kargs': {}})
 
             # wait a bit
             time.sleep(0.5)
 
         # stop router
-        self.router.queue.put((self.address,
-            self.router.address, ('stop', )))
+        self.router.queue.put({'sender': self.address,
+            'receiver': self.router.address, 'request': 'stop',
+            'args': [], 'kargs': {}})

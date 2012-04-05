@@ -64,17 +64,17 @@ class Node(Process):
         # send request
         self.output.put(message)
 
-    def respond(self, reciever, request, *args, **kargs):
+    def respond(self, receiver, request, *args, **kargs):
         # generate message
-        message = {'sender': self.address, 'receiver': reciever,
+        message = {'sender': self.address, 'receiver': receiver,
             'response': request, 'args': args, 'kargs': kargs}
 
         # send response
         self.output.put(message)
 
-    def register_responder(self, request, reciever, responder):
+    def register_responder(self, request, receiver, responder):
         # add responder to dict
-        self.responder[(request, reciever)] = responder
+        self.responder[(request, receiver)] = responder
 
     def on_request(self, message):
         # get request
