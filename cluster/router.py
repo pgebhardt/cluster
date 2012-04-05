@@ -38,127 +38,104 @@ class RoutingNode(Process):
         # create queue manager
         self.queueManager = QueueThread(self.queue, self.port, self.key)
 
-        # list of commands
-        self.commands = {}
-
         # list of responder
         self.responder = {}
 
-        # register standard commands
-        self.register_command('new node', self.new_node)
-        self.register_command('delete node', self.delete_node)
-        self.register_command('local nodes', self.local_nodes)
-        self.register_command('local node list', self.local_node_list)
-        self.register_command('remote nodes', self.remote_nodes)
-        self.register_command('routing nodes', self.routing_nodes)
-        self.register_command('verbose', self.setVerbose)
-        self.register_command('broadcast', self.broadcast)
-        self.register_command('connect', self.connect)
-        self.register_command('disconnect', self.disconnect)
-        self.register_command('stop', self.stop_)
-        self.register_command('unsupported command', self.unsupported_command)
-        self.register_command('error', self.error)
+        # set running flag
+        self.running = True
+
+    def start(self):
+        if not self.running:
+            # start queue mananger
+            self.queueManager.start()
+
+            # set running flag
+            self.running = True
+
+            # call base class start
+            super(RoutingNode, self).start()
 
     def run(self):
-        # start queue manager
-        self.queueManager.start()
-
         # main loop
-        while 1:
+        while self.running:
             # get incoming messages
-            sender, reciever, message = self.queue.get()
+            message = self.queue.get()
 
             # output complete message throughput if in verbose mode
             if self.verbose:
-                print "{} sent '{}' to {} at {}".format(sender, message,
-                    reciever, datetime.now())
+                print '{} at {}'.format(message, datetime.now())
+
+            # get reciever
+            receiver = message['receiver']
 
             # check reciever
-            if reciever == self.address:
-                answer = self.on_message(sender, message)
+            if receiver == self.address:
+                # check for request
+                if 'request' in message:
+                    # call message handler
+                    self.on_message(message)
 
-                # create answer
-                if not answer is None:
-                    sender, reciever, message = reciever, sender, answer
+                elif 'response' in message:
+                    # call response handler
+                    self.responder[(message['response'], message['sender'])](
+                        message['sender'], *message['args'],
+                        **message['kargs'])
 
-                else:
-                    continue
+                    # unregister responder
+                    del self.responder[(message['response'],
+                        message['sender'])]
+
+                continue
 
             # send message
-            if reciever in self.localnodes:
-                self.localnodes[reciever].send((sender, reciever, message))
+            if receiver in self.localnodes:
+                self.localnodes[receiver].send(message)
 
-            elif reciever in self.remotenodes:
-                self.remotenodes[reciever].put((sender, reciever, message))
+            elif receiver in self.remotenodes:
+                self.remotenodes[receiver].put(message)
 
-            elif reciever in self.routingnodes:
-                self.routingnodes[reciever].put((sender, reciever, message))
+            elif receiver in self.routingnodes:
+                self.routingnodes[receiver].put(message)
 
-            # check message for termination
-            if message[0] == 'router stopped' and sender == self.address:
-                print 'terminating router {}'.format(self.address)
-                return
-
-    def on_message(self, sender, message):
-        # check for responder
-        if (message[0], sender) in self.responder:
-            # execute responder
-            try:
-                # check length of message
-                if len(message) == 1:
-                    return self.responder[(message[0], sender)](sender)
-
-                elif len(message) == 2:
-                    return self.responder[(message[0], sender)](
-                        sender, message[1])
-
-                else:
-                    return self.responder[(message[0], sender)](
-                        sender, *message[1:])
-
-                # delete responder
-                del self.responder[(message[0], sender)]
-
-            except:
-                # send error message
-                return ('error', ('Executing responder', sender, message))
-
-        # check for commands
-        elif message[0] in self.commands:
-            # execute command
-                try:
-                    # check length of message
-                    if len(message) == 1:
-                        return self.commands[message[0]](sender)
-
-                    elif len(message) == 2:
-                        return self.commands[message[0]](sender, message[1])
-
-                    else:
-                        return self.commands[message[0]](sender, *message[1:])
-
-                except:
-                    # send error message
-                    return ('error', ('Executing command', message))
-
-        # unsupported command
-        else:
-            return ('unsupported command', message)
-
-    def register_command(self, command, callable):
-        # add command to dict
-        self.commands[command] = callable
-
-    def register_responder(self, command, sender, callable):
-        # add responder to dict
-        self.responder[(command, sender)] = callable
-
-    def request(self, receiver, request, response, responder):
+    def request(self, receiver, responder, request, *args, **kargs):
         # register responder
-        self.register_responder(response, receiver, responder)
+        if not responder is None:
+            self.register_responder(request, receiver, responder)
+
+        # generate message
+        message = {'request': request, 'sender': self.address,
+            'receiver': receiver, 'args': args, 'kargs': kargs}
 
         # send request
-        self.queue.put((self.address, receiver, request))
+        self.queue.put(message)
+
+    def respond(self, reciever, request, *args, **kargs):
+        # generate message
+        message = {'sender': self.address, 'reciever': reciever,
+            'response': request, 'args': args, 'kargs': kargs}
+
+        # send response
+        self.queue.put(message)
+
+    def register_responder(self, request, reciever, responder):
+        # add responder to dict
+        self.responder[(request, reciever)] = responder
+
+    def on_message(self, sender, message):
+        # get request
+        request = message['request']
+
+        # check for callable attribute
+        if hasattr(self, request):
+            # check for callable
+            if callable(getattr(self, request)):
+                # call method
+                response = getattr(self, request)(*message['args'],
+                    **message['kargs'])
+
+                # send response
+                self.respond(message['sender'],
+                    message['request'], response)
 
     def new_node(self, sender, nodeClass=Node):
         # new node address
@@ -337,24 +314,28 @@ class RoutingNode(Process):
         else:
             return ('error', ('not connected', address))
 
-    def stop_(self, sender):
+    def stop(self, sender):
+        # responder
+        def responder(sender, response=None):
+            # check for router and nodes to be deleted
+            if len(self.routingnodes) == 0 and \
+                len(self.localnodes) == 0:
+                # set running flag
+                self.running = False
+
+                print 'router stopped'
+
         # inform all connected routing nodes
         for router in self.routingnodes:
             if router != self.address:
-                self.routingnodes[router].put((self.address, router,
-                    ('disconnect', self.address)))
+                self.request(router, responder, 'disconnect', self.address)
 
         # stop all local nodes
         for node in self.localnodes:
-            self.localnodes[node].send((self.address, node, ('stop', )))
+            self.request(node, responder, 'stop')
 
         # create answer
-        return ('router stopped', )
-
-    def unsupported_command(self, sender, command):
-        # output error
-        self.error(sender, "'{}' not supported by {}".format(
-            command, sender))
+        return 'stopping router'
 
     def error(self, sender, message):
         # output error

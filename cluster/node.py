@@ -14,7 +14,19 @@ class Node(Process):
         self.responder = {}
 
         # set running flag
-        self.running = True
+        self.running = False
+
+    def start(self, input, output):
+        if not self.running:
+            # save input and output
+            self.input = input
+            self.output = output
+
+            # set running flag
+            self.running = True
+
+            # call base class method
+            super(Node, self).start()
 
     def run(self):
         # main loop
@@ -42,7 +54,8 @@ class Node(Process):
 
     def request(self, receiver, responder, request, *args, **kargs):
         # register responder
-        self.register_responder(request, receiver, responder)
+        if not responder is None:
+            self.register_responder(request, receiver, responder)
 
         # generate message
         message = {'request': request, 'sender': self.address,
@@ -84,14 +97,8 @@ class Node(Process):
 
         return None
 
-    def start(self, input, output):
-        # save input and output
-        self.input = input
-        self.output = output
-
-        # call base class method
-        super(Node, self).start()
-
     def stop(self):
         # set running flag
         self.running = False
+
+        return
