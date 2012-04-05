@@ -274,8 +274,7 @@ class RoutingNode(Process):
         for node in self.remotenodes:
             self.remotenodes[node].put((sender, node, message))
 
-        # TODO
-        return None
+        return True
 
     def connect(self, sender, address, ipAddress, port, key):
         # connect to routing node
@@ -322,6 +321,7 @@ class RoutingNode(Process):
 
     def disconnect(self, sender, address):
         # check for correct address
+        print address
         if address in self.routingnodes and address != self.address:
             # gather all relevant nodes
             toDelete = []
@@ -334,18 +334,14 @@ class RoutingNode(Process):
                 # delete node
                 del self.remotenodes[node]
 
-            # inform remote to disconnect
-            self.routingnodes[address].put((self.address, address,
-                ('disconnect', self.address)))
-
             # remove routingnodes
             del self.routingnodes[address]
 
             # create answer
-            return ('disconnected', address)
+            return True
 
         else:
-            return ('error', ('not connected', address))
+            return  (False, 'not connected')
 
     def stop(self, sender):
         # responder
@@ -354,6 +350,14 @@ class RoutingNode(Process):
 
             if len(self.localnodes) == 0:
                 self.running = False
+
+        # tell all router to disconnect
+        for router in self.routingnodes:
+            if router != self.address:
+                # send custom message
+                self.routingnodes[router].put({'sender': self.address,
+                    'receiver': router, 'request': 'disconnect',
+                    'args': [self.address], 'kargs': {}})
 
         # send stop to every node
         for node in self.localnodes:
