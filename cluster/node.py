@@ -89,8 +89,9 @@ class Node(Process):
                     *message['args'], **message['kargs'])
 
                 # send response
-                self.respond(message['sender'],
-                    message['request'], response)
+                if not response is None:
+                    self.respond(message['sender'],
+                        message['request'], response)
 
     def on_response(self, message):
         # get response tuple
@@ -111,10 +112,10 @@ class Node(Process):
     def print_to_screen(self, sender, string):
         print string
 
-        return None
+        return True
 
     def stop(self, sender):
         # set running flag
         self.running = False
 
-        return
+        return True

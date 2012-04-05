@@ -115,9 +115,9 @@ class RoutingNode(Process):
         # send response
         self.queue.put(message)
 
-    def register_responder(self, request, reciever, responder):
+    def register_responder(self, request, receiver, responder):
         # add responder to dict
-        self.responder[(request, reciever)] = responder
+        self.responder[(request, receiver)] = responder
 
     def on_request(self, message):
         # get request
@@ -132,8 +132,9 @@ class RoutingNode(Process):
                     *message['args'], **message['kargs'])
 
                 # send response
-                self.respond(message['sender'],
-                    message['request'], response)
+                if not response is None:
+                    self.respond(message['sender'],
+                        message['request'], response)
 
     def on_response(self, message):
         # get response tuple
@@ -149,7 +150,7 @@ class RoutingNode(Process):
 
         except:
             # TODO
-            pass
+            print 'geht nicht'
 
     def new_node(self, sender, nodeClass=Node):
         # new node address
@@ -179,7 +180,7 @@ class RoutingNode(Process):
 
         # broadcast new node
         if len(self.routingnodes) == 1:
-            return localAddress
+            return address
 
         else:
             self._count = len(self.routingnodes) - 1
@@ -191,7 +192,7 @@ class RoutingNode(Process):
 
                 # check for all router respond
                 if self._count <= 0:
-                    self.respond(sender, 'new_node', localAddress)
+                    self.respond(sender, 'new_node', address)
 
             # request new node append
             for router in self.routingnodes:
@@ -199,30 +200,38 @@ class RoutingNode(Process):
                     self.request(router, 'local_node_list',
                         self.localnodes.keys())
 
+            return None
+
     def delete_node(self, sender, node):
-        # TODO
-        # stop node if local
+        # check for connected node
         if node in self.localnodes:
-            # stop node
-            self.localnodes[node].send((self.address, node, ('stop', )))
+            # responder
+            def responder(sender, success):
+                # request all router to delete node
+                for router in self.routingnodes:
+                    if router != self.address:
+                        self.request(router, None, 'delete_node',
+                            node)
 
-            # tell all router to delete node
-            for router in self.routingnodes:
-                if router != self.address:
-                    self.routingnodes[router].put(
-                        (sender, router, ('delete node', node)))
+                # delete node
+                del self.localnodes[node]
 
-            # delete node form list
-            del self.localnodes[node]
+                # respond
+                self.respond(sender, 'delete_node', True)
+
+            # request stopping node
+            self.request(node, responder, 'stop')
+
+            return None
 
         elif node in self.remotenodes:
+            # delete node from list
             del self.remotenodes[node]
 
-        else:
-            return ('error', ('not connected', node))
+            return True
 
-        # report success
-        return ('node deleted', node)
+        else:
+            return False
 
     def local_nodes(self, sender):
         # list of local nodes
@@ -332,29 +341,22 @@ class RoutingNode(Process):
 
     def stop(self, sender):
         # responder
-        def responder(sender, response=None):
-            # check for router and nodes to be deleted
-            if len(self.routingnodes) == 1 and \
-                len(self.localnodes) == 0:
-                # set running flag
+        def responder(sender, success):
+            del self.localnodes[sender]
+            print len(self.localnodes)
+
+            if len(self.localnodes) == 0:
                 self.running = False
 
-                print 'router stopped'
-
-        # check for router and nodes
-        responder(self.address)
-
-        # inform all connected routing nodes
-        for router in self.routingnodes:
-            if router != self.address:
-                self.request(router, responder, 'disconnect', self.address)
-
-        # stop all local nodes
+        # send stop to every node
         for node in self.localnodes:
             self.request(node, responder, 'stop')
 
-        # create answer
-        return 'stopping router'
+        # check localnodes
+        if len(self.localnodes) == 0:
+            self.running = False
+
+        return True
 
     def error(self, sender, message):
         # output error
