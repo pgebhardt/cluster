@@ -62,8 +62,9 @@ class RoutingNode(Process):
             message = self.queue.get()
 
             # output complete message throughput if in verbose mode
-            #if self.verbose:
-            print '{} at {}'.format(message, datetime.now())
+            if self.verbose:
+                print '{} received: {} at {}'.format(self.address,
+                    message, datetime.now())
 
             # get reciever
             receiver = message['receiver']
@@ -148,9 +149,9 @@ class RoutingNode(Process):
             # delete responder
             del self.responder[response]
 
-        except:
+        except Exception, e:
             # TODO
-            print 'geht nicht'
+            print e
 
     def new_node(self, sender, nodeClass=Node):
         # new node address
@@ -186,7 +187,7 @@ class RoutingNode(Process):
             self._count = len(self.routingnodes) - 1
 
             # responder
-            def responder(sender, remoteNodes):
+            def responder(s, remoteNodes):
                 # decrement count
                 self._count -= 1
 
@@ -197,10 +198,22 @@ class RoutingNode(Process):
             # request new node append
             for router in self.routingnodes:
                 if router != self.address:
-                    self.request(router, 'local_node_list',
-                        self.localnodes.keys())
+                    self.request(router, responder, 'add_node',
+                        address)
 
             return None
+
+    def add_node(self, sender, node):
+        # check for connected router
+        if sender in self.routingnodes:
+            # add remote node to list
+            self.remotenodes[node] = self.routingnodes[sender]
+
+            return True
+
+        else:
+            # TODO
+            return False
 
     def delete_node(self, sender, node):
         # check for connected node
@@ -235,29 +248,22 @@ class RoutingNode(Process):
 
     def local_nodes(self, sender):
         # list of local nodes
-        return ('local node list', self.localnodes.keys())
-
-    def local_node_list(self, sender, remoteNodes):
-        # add remote nodes to dict
-        for node in remoteNodes:
-            self.remotenodes[node] = self.routingnodes[sender]
-
-        return remoteNodes
+        return self.localnodes.keys()
 
     def remote_nodes(self, sender):
         # list of remote nodes
-        return ('remote node list', self.remotenodes.keys())
+        return self.remotenodes.keys()
 
     def routing_nodes(self, sender):
         # list of routing nodes
-        return ('routing node list', self.routingnodes.keys())
+        return self.routingnodes.keys()
 
-    def setVerbose(self, sender, verbose):
+    def set_verbose(self, sender, verbose):
         # set verbose mode
         self.verbose = verbose
 
         # inform sender
-        return ('verbose mode set', verbose)
+        return verbose
 
     def broadcast(self, sender, message):
         # send message to all local nodes
@@ -267,6 +273,9 @@ class RoutingNode(Process):
         # send message to all remote nodes
         for node in self.remotenodes:
             self.remotenodes[node].put((sender, node, message))
+
+        # TODO
+        return None
 
     def connect(self, sender, address, ipAddress, port, key):
         # connect to routing node
@@ -284,33 +293,32 @@ class RoutingNode(Process):
                 queue = queueManager.get_queue()
             except:
                 # inform about failure
-                answer = ('error', 'unable to connect',
-                    (address, ipAddress, port))
-                return answer
+                return (False, 'unable to connect')
 
             # add new remote node
             self.routingnodes[address] = queue
 
             # responder
-            def connect_responder(sender, address):
-                pass
-
-            def local_node_responder(sender, nodes):
-                # add remote nodes to dict
+            def node_list_responder(s, nodes):
+                # add nodes to remote node list
                 for node in nodes:
-                    self.remotenodes[node] = self.routingnodes[sender]
+                    self.remotenodes[node] = self.routingnodes[address]
 
-            # request connection
-            self.request(address, ('connect', self.address,
-                self.ipAddress, self.port, self.key), 'connected',
-                connect_responder)
+                # inform success
+                self.respond(sender, 'connect', True)
 
-            # request local nodes
-            self.request(address, ('local nodes', ), 'local node list',
-                local_node_responder)
+            def connection_responder(s, success):
+                # request node list
+                self.request(address, node_list_responder, 'local_nodes')
 
-            # inform about success
-            return ('connected', address)
+            # request connection to self
+            self.request(address, connection_responder, 'connect',
+                self.address, self.ipAddress, self.port, self.key)
+
+            return None
+
+        else:
+            return (False, 'allready connected')
 
     def disconnect(self, sender, address):
         # check for correct address
@@ -343,7 +351,6 @@ class RoutingNode(Process):
         # responder
         def responder(sender, success):
             del self.localnodes[sender]
-            print len(self.localnodes)
 
             if len(self.localnodes) == 0:
                 self.running = False
