@@ -5,6 +5,34 @@ from datetime import datetime
 import time
 
 
+class ShellProxy(object):
+    def __init__(self, queue, local, remote):
+        # call base class init
+        super(ShellProxy, self).__init__()
+
+        # save attributes
+        self.queue = queue
+        self.local = local
+        self.remote = remote
+
+    def __getattr__(self, value):
+        # request function
+        def request(*args, **kargs):
+            # request value
+            self.queue.put({'sender': self.local,
+                'receiver': self.remote, 'request': value,
+                'args': args, 'kargs': kargs})
+
+        return request
+
+
+def requester(queue, local):
+    def request(remote):
+        return ShellProxy(queue, local, remote)
+
+    return request
+
+
 class ShellNode(Node):
     def on_response(self, message):
         # report answers
@@ -42,6 +70,10 @@ class Shell(object):
         if not script is None:
             scriptLines = script.split('\n')
 
+        # create requester
+        request = requester(self.router.input,
+            self.address)
+
         # main loop
         while True:
             if script == None:
@@ -64,17 +96,14 @@ class Shell(object):
 
             # parse input
             try:
-                receiver, request, args = eval(
-                    userInput, self.router.nodeClasses)
+                eval(userInput, dict(
+                    self.router.nodeClasses.items() + \
+                        {'request': request}.items()))
 
-            except:
+            except Exception, e:
                 print "invalid input: '{}'".format(userInput)
+                print e
                 continue
-
-            # send input message to routing node
-            self.router.input.put({'sender': self.address,
-                'receiver': receiver, 'request': request,
-                'args': args, 'kargs': {}})
 
             # wait a bit
             time.sleep(0.5)
