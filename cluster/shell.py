@@ -23,17 +23,17 @@ class Shell(object):
         # save shell address
         self.address = '{}.1'.format(address)
 
-        # add prining node
-        self.router.queue.put({'sender': self.address,
-            'receiver': self.router.address, 'request': 'new_node',
-            'args': [ShellNode], 'kargs': {}})
-
         # add ShellNode to node dict
         self.router.nodeClasses['ShellNode'] = ShellNode
 
     def start(self, script=None):
         # start router
         self.router.start()
+
+        # add prining node
+        self.router.input.put({'sender': self.address,
+            'receiver': self.router.address, 'request': 'new_node',
+            'args': [ShellNode], 'kargs': {}})
 
         # wait a bit
         time.sleep(1)
@@ -64,14 +64,15 @@ class Shell(object):
 
             # parse input
             try:
-                receiver, request, args = eval(userInput, self.router.nodeClasses)
+                receiver, request, args = eval(
+                    userInput, self.router.nodeClasses)
 
             except:
                 print "invalid input: '{}'".format(userInput)
                 continue
 
             # send input message to routing node
-            self.router.queue.put({'sender': self.address,
+            self.router.input.put({'sender': self.address,
                 'receiver': receiver, 'request': request,
                 'args': args, 'kargs': {}})
 
@@ -79,6 +80,6 @@ class Shell(object):
             time.sleep(0.5)
 
         # stop router
-        self.router.queue.put({'sender': self.address,
+        self.router.input.put({'sender': self.address,
             'receiver': self.router.address, 'request': 'stop',
             'args': [], 'kargs': {}})

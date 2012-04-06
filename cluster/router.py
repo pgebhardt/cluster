@@ -1,32 +1,26 @@
-from multiprocessing import Process, Pipe, Queue
+from multiprocessing import Queue
 from multiprocessing.managers import BaseManager
 from threading import Thread
 from datetime import datetime
 import socket
+from basicnode import BasicNode
 from node import Node
 
 
-class RoutingNode(Process):
+class RoutingNode(BasicNode):
     def __init__(self, address, port=3000, key='bla'):
         # call base class init
-        super(RoutingNode, self).__init__()
-
-        # set address
-        self.address = '{}'.format(address)
+        super(RoutingNode, self).__init__('{}'.format(address))
 
         # save key
         self.key = key
 
         # verbose mode flag
         self.verbose = False
-
-        # create message queue
-        self.queue = Queue()
-
         # list with node connections
         self.localnodes = {}
         self.remotenodes = {}
-        self.routingnodes = {self.address: self.queue}
+        self.routingnodes = {}
 
         # dict of node classes
         self.nodeClasses = {'Node': Node}
@@ -35,22 +29,19 @@ class RoutingNode(Process):
         self.ipAddress = socket.gethostbyname(socket.gethostname())
         self.port = port
 
-        # create queue manager
-        self.queueManager = QueueThread(self.queue, self.port, self.key)
-
-        # list of responder
-        self.responder = {}
-
-        # set running flag
-        self.running = False
-
     def start(self):
         if not self.running:
-            # set running flag
-            self.running = True
+            # create queue
+            queue = Queue()
+
+            # add self to routing node list
+            self.routingnodes[self.address] = queue
+
+            # create queue manager
+            self.queueManager = QueueThread(queue, self.port, self.key)
 
             # call base class start
-            super(RoutingNode, self).start()
+            super(RoutingNode, self).start(queue, queue)
 
     def run(self):
         # start queue mananger
@@ -59,7 +50,7 @@ class RoutingNode(Process):
         # main loop
         while self.running:
             # get incoming messages
-            message = self.queue.get()
+            message = self.input.get()
 
             # output complete message throughput if in verbose mode
             if self.verbose:
@@ -73,7 +64,7 @@ class RoutingNode(Process):
             if receiver != self.address:
                 # send message
                 if receiver in self.localnodes:
-                    self.localnodes[receiver].send(message)
+                    self.localnodes[receiver].put(message)
 
                 elif receiver in self.remotenodes:
                     self.remotenodes[receiver].put(message)
@@ -96,63 +87,6 @@ class RoutingNode(Process):
                 # TODO
                 pass
 
-    def request(self, receiver, responder, request, *args, **kargs):
-        # register responder
-        if not responder is None:
-            self.register_responder(request, receiver, responder)
-
-        # generate message
-        message = {'request': request, 'sender': self.address,
-            'receiver': receiver, 'args': args, 'kargs': kargs}
-
-        # send request
-        self.queue.put(message)
-
-    def respond(self, reciever, request, *args, **kargs):
-        # generate message
-        message = {'sender': self.address, 'receiver': reciever,
-            'response': request, 'args': args, 'kargs': kargs}
-
-        # send response
-        self.queue.put(message)
-
-    def register_responder(self, request, receiver, responder):
-        # add responder to dict
-        self.responder[(request, receiver)] = responder
-
-    def on_request(self, message):
-        # get request
-        request = message['request']
-
-        # check for callable attribute
-        if hasattr(self, request):
-            # check for callable
-            if callable(getattr(self, request)):
-                # call method
-                response = getattr(self, request)(message['sender'],
-                    *message['args'], **message['kargs'])
-
-                # send response
-                if not response is None:
-                    self.respond(message['sender'],
-                        message['request'], response)
-
-    def on_response(self, message):
-        # get response tuple
-        response = (message['response'], message['sender'])
-
-        # try execute responder
-        try:
-            self.responder[response](message['sender'],
-                *message['args'], **message['kargs'])
-
-            # delete responder
-            del self.responder[response]
-
-        except Exception, e:
-            # TODO
-            print e
-
     def new_node(self, sender, nodeClass=Node):
         # new node address
         localAddress = len(self.localnodes) + 1
@@ -171,13 +105,13 @@ class RoutingNode(Process):
             return
 
         # create node connection
-        parent, child = Pipe()
+        queue = Queue()
 
         # save connection
-        self.localnodes[address] = parent
+        self.localnodes[address] = queue
 
         # start node
-        node.start(child, self.queue)
+        node.start(queue, self.input)
 
         # broadcast new node
         if len(self.routingnodes) == 1:
@@ -321,7 +255,6 @@ class RoutingNode(Process):
 
     def disconnect(self, sender, address):
         # check for correct address
-        print address
         if address in self.routingnodes and address != self.address:
             # gather all relevant nodes
             toDelete = []
